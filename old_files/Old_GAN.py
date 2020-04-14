@@ -10,7 +10,7 @@ from tqdm import tqdm
 import seaborn as sns
 
 from data.generate_noise import generate_noise
-from util.split_data import split_sequence
+from utility.split_data import split_sequence
 
 
 class GAN:

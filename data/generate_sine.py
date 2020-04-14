@@ -35,7 +35,7 @@ def generate_sine_data(num_points=2000, plot=False):
         plt.axvline(noise.mean(), color='b', linewidth=1)
         plt.show()
 
-    return pd.DataFrame({'y': noise})
+    return np.expand_dims(y, axis=-1)
 
 
 if __name__ == '__main__':

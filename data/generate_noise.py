@@ -4,22 +4,22 @@ import matplotlib.pyplot as plt
 
 
 def generate_noise(num_points=2000, plot=False):
-    noise_distribution = 'normal'
+    noise_distribution = 'bimodal'
     if noise_distribution.lower() in ['gaussian', 'normal']:
         print('Noise distribution: Gaussian')
-        noise = np.random.normal(0, 0.1, (num_points, 1))
+        noise = np.random.normal(1, 0.01, (num_points, 1))
     elif noise_distribution.lower() == 'uniform':
         print('Noise distribution: Uniform')
-        noise = np.random.uniform(-0.2, 0.2, (num_points, 1))
+        noise = np.random.uniform(0.2, 1, (num_points, 1))
     elif noise_distribution.lower() == 'gamma':
         print('Noise distribution: Gamma')
         noise = np.random.gamma(2, 2, (num_points, 1))/4
     elif noise_distribution.lower() == 'bimodal':
         print('Noise distribution: Bimodal')
         y1 = np.random.normal(-0.5, 0.2, (num_points, 1))
-        y2 = np.random.uniform(0, 2, (num_points, 1))
-        w = np.random.binomial(1, 0.5, num_points)  # 50:50 random choice
-        noise = w * y1 + (1 - w) * y2
+        y2 = np.random.uniform(1, 2, (num_points, 1))
+        w = np.random.binomial(1, 0.5, (num_points, 1))  # 50:50 random choice
+        noise = np.multiply(w,  y1) + np.multiply(1 - w, y2)
     else:
         print('Noise distribution: None')
         noise = np.zeros([num_points, 1])

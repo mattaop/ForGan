@@ -67,10 +67,10 @@ class GAN:
 
         x = Dense(16)(noise_inp)
         x = ReLU()(x)
-        x = BatchNormalization()(x)
-        x = Dense(16)(x)
-        x = ReLU()(x)
-        x = BatchNormalization()(x)
+        # x = BatchNormalization()(x)
+        # x = Dense(16)(x)
+        # x = ReLU()(x)
+        # x = BatchNormalization()(x)
 
         prediction = Dense(1)(x)
 
@@ -158,7 +158,7 @@ class GAN:
 
             # Plot the progress
             print("%d [D loss: %f, acc.: %.2f%%] [G loss: %f, forecast mse: %f]" %
-                  (epoch, d_loss[0], 100*d_loss[1], g_loss, forecast_mse[epoch]))
+                  (epoch, d_loss[0], 100*(d_loss[1]), g_loss, forecast_mse[epoch]))
 
             #kl_divergence[epoch] = self.kl_divergence(real_samples, gen_forecasts)
             #print("KL-divergence: ", kl_divergence[epoch])

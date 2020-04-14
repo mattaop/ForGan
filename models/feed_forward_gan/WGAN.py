@@ -2,10 +2,11 @@ import numpy as np
 from keras import Model
 from keras.layers import *
 from keras.optimizers import RMSprop
+from keras_radam import RAdam
 from keras import backend
 
 from models.feed_forward_gan.GAN import GAN
-from util.ClipConstraint import ClipConstraint
+from utility.ClipConstraint import ClipConstraint
 
 
 class WGAN(GAN):
@@ -13,9 +14,9 @@ class WGAN(GAN):
         GAN.__init__(self)
         self.plot_rate = 100
         self.plot_folder = 'feed_forward_WGAN'
-        self.noise_vector_size = 10  # Try larger vector
+        self.noise_vector_size = 100  # Try larger vector
 
-        self.optimizer = RMSprop(lr=0.0005)
+        self.optimizer = RMSprop(lr=0.002)
         self.loss_function = self.wasserstein_loss
 
     def wasserstein_loss(self, y_true, y_pred):
@@ -32,7 +33,7 @@ class WGAN(GAN):
         x = Dense(64, kernel_constraint=const)(x)
         x = LeakyReLU(alpha=0.1)(x)
         # x = Dropout(0.4)(x)
-        validity = Dense(1, kernel_constraint=const)(x)
+        validity = Dense(1)(x)
 
         model = Model(inputs=future_inp, outputs=validity)
         model.summary()
@@ -49,5 +50,5 @@ class WGAN(GAN):
 if __name__ == '__main__':
     gan = WGAN()
     gan.build_gan()
-    gan.train(epochs=1500, batch_size=1024, discriminator_epochs=3)
+    gan.train(epochs=5000, batch_size=64, discriminator_epochs=3)
     gan.monte_carlo_prediction(mc_forward_passes=5000)

@@ -9,7 +9,7 @@ import tensorflow as tf
 from tqdm import tqdm
 
 from data.generate_sine import generate_sine_data
-from util.split_data import split_sequence
+from utility.split_data import split_sequence
 
 
 class GAN:
