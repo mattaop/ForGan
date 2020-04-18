@@ -64,7 +64,7 @@ class RecurrentConvGAN(GAN):
         noise_inp = Input(shape=noise_shape)
         historic_inp = Input(shape=historic_shape)
 
-        hist = LSTM(32, return_sequences=False)(historic_inp)
+        hist = SimpleRNN(32, return_sequences=False)(historic_inp)
         # hist = ReLU()(hist)
 
         x = Concatenate(axis=1)([hist, noise_inp])

@@ -1,6 +1,6 @@
 from models.feed_forward_gan import GAN, WGAN
 from models.conv_gan import ConvGAN, ConvWGAN
-from models.recurrent_gan import RecurrentGAN, RecurrentWGAN, RecurrentConvGAN
+from models.recurrent_gan import RecurrentGAN, RecurrentWGAN, RecurrentConvGAN, RecurrentConvWGAN
 from models.reccurent_neural_network import RNN
 
 
@@ -28,6 +28,8 @@ def get_GAN(model_name: str = 'gan')-> {GAN.GAN, WGAN.WGAN, ConvGAN.ConvGAN, Con
     elif model_name.lower() == 'recurrentconvgan':
         print('Model: RecurrentConvGAN')
         model = RecurrentConvGAN.RecurrentConvGAN()
+    elif model_name.lower() == 'recurrentconvwgan':
+        model = RecurrentConvWGAN.RecurrentConvWGAN()
     else:
         ImportError('Model ' + model_name + 'not found')
         model = None

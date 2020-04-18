@@ -2,7 +2,7 @@ import numpy as np
 from keras import Model
 from keras.layers import *
 from keras.optimizers import RMSprop
-from keras_radam import RAdam
+# from keras_radam import RAdam
 from keras import backend
 
 from models.feed_forward_gan.GAN import GAN

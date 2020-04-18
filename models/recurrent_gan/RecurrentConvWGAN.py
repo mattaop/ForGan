@@ -16,7 +16,7 @@ class RecurrentConvWGAN(RecurrentConvGAN):
         self.plot_folder = 'RecurrentConvWGAN'
         self.noise_vector_size = 100  # Try larger vector
 
-        self.optimizer = RMSprop(lr=0.0005)
+        self.optimizer = RMSprop(lr=0.001)
         self.loss_function = self.wasserstein_loss
 
     def wasserstein_loss(self, y_true, y_pred):
@@ -30,7 +30,7 @@ class RecurrentConvWGAN(RecurrentConvGAN):
         noise_inp = Input(shape=noise_shape)
         historic_inp = Input(shape=historic_shape)
 
-        hist = LSTM(32, return_sequences=False)(historic_inp)
+        hist = SimpleRNN(32, return_sequences=False)(historic_inp)
         # hist = ReLU()(hist)
 
         x = Concatenate(axis=1)([hist, noise_inp])
