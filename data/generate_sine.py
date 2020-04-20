@@ -25,7 +25,7 @@ def generate_sine_data(num_points=2000, plot=False):
         print('Noise distribution: None')
         noise = np.zeros(num_points)
 
-    y = np.sin(x*0.1) + noise
+    y = np.sin(x*np.pi/6) + noise
     if plot:
         plt.hist(noise, color='blue', edgecolor='black',
                  bins=int(50), density=True)

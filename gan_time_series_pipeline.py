@@ -47,7 +47,7 @@ def configure_model(model_name):
 
 def load_data(cfg, window_size):
     if cfg['data_source'].lower() == 'sine':
-        data = generate_sine_data(num_points=5000)
+        data = generate_sine_data(num_points=500)
     else:
         return None
     train = data[:-int(len(data)*cfg['test_split'])]
@@ -170,7 +170,7 @@ def pipeline():
     cfg = load_config_file('config\\config.yml')
     gan = configure_model(model_name=cfg['gan']['model_name'])
     train, test = load_data(cfg=cfg['data'], window_size=gan.window_size)
-    trained_gan = train_gan(gan=gan, data=train, epochs=800, batch_size=1024, discriminator_epochs=2)
+    trained_gan = train_gan(gan=gan, data=train, epochs=800, batch_size=256, discriminator_epochs=2)
     test_model(gan=trained_gan, data=test, mc_forward_passes=500)
 
 
