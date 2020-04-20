@@ -173,6 +173,7 @@ class GAN:
         plt.show()
 
     def plot_distributions(self, real_samples, fake_samples, filename=None):
+        print('Plot directory: ', filename)
         sns.kdeplot(fake_samples.flatten(), color='red', alpha=0.6, label='GAN', shade=True)
         sns.kdeplot(real_samples.flatten(), color='blue', alpha=0.6, label='Real', shade=True)
         plt.legend()

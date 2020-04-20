@@ -19,7 +19,7 @@ class RNN:
     def __init__(self):
         self.window_size = 24
         self.forecasting_horizon = 1
-        self.optimizer = Adam(lr=0.0005, beta_1=0.5)
+        self.optimizer = Adam(lr=0.001)
         self.loss_function = 'mse'
 
         # Build and compile the discriminator
@@ -54,6 +54,10 @@ class RNN:
         plt.plot(np.linspace(1, epochs, epochs), history.history['loss'], label='Training loss')
         plt.legend()
         plt.show()
+
+    def forecast(self, data):
+        forecast = self.model.predict(data)
+        return forecast
 
     def monte_carlo_forecast(self, data, steps=1, mc_forward_passes=500, plot=False):
         time_series = np.expand_dims(data, axis=0)
