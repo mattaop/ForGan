@@ -23,7 +23,7 @@ class RecurrentConvGAN(GAN):
         self.forecasting_horizon = 1
         self.noise_vector_size = 100  # Try larger vector
 
-        self.optimizer = Adam(0.001, 0.5)
+        self.optimizer = Adam(0.0005, 0.5)
         self.loss_function = 'binary_crossentropy'
 
     def build_gan(self):

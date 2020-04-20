@@ -61,12 +61,12 @@ class RecurrentGAN(GAN):
         noise_inp = Input(shape=noise_shape)
         historic_inp = Input(shape=historic_shape)
 
-        hist = GRU(16, return_sequences=False)(historic_inp)
+        hist = SimpleRNN(16, return_sequences=False)(historic_inp)
         # hist = ReLU()(hist)
 
         x = Concatenate(axis=1)([hist, noise_inp])
-        x = BatchNormalization()(x)
-        x = Dense(self.window_size + self.forecasting_horizon)(x)
+        #x = BatchNormalization()(x)
+        x = Dense(32)(x)
         x = ReLU()(x)
         prediction = Dense(self.forecasting_horizon)(x)
 
@@ -84,7 +84,7 @@ class RecurrentGAN(GAN):
 
         x = Concatenate(axis=1)([historic_inp, future_inp])
 
-        x = GRU(64, return_sequences=False)(x)
+        x = SimpleRNN(64, return_sequences=False)(x)
         # x = LeakyReLU(alpha=0.2)(x)
         x = Dense(64)(x)
         x = LeakyReLU(alpha=0.1)(x)
