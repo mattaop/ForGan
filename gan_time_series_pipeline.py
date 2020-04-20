@@ -8,7 +8,7 @@ os.environ['TF_DETERMINISTIC_OPS'] = '1'
 import numpy as np
 import random as rn
 import tensorflow as tf
-
+print(tf.__version__)
 seed = 1
 rn.seed(seed)
 np.random.seed(seed)
@@ -29,7 +29,7 @@ from config.load_config import load_config_file
 from models.get_model import get_GAN
 from utility.split_data import split_sequence
 from data.generate_sine import generate_sine_data
-from utility.compute_coverage import print_coverage
+from utility.compute_coverage import print_coverage, compute_coverage
 
 
 def configure_model(model_name):
@@ -157,6 +157,12 @@ def test_model(gan, data, mc_forward_passes=500):
     plt.show()
     print('Forecast error:', mean_squared_error(data[gan.window_size:], forecast_mean[:, 0]))
     print('Mean forecast standard deviation:', forecast_std.mean(axis=0))
+    print('80%-prediction interval coverage:', compute_coverage(actual_values=data[gan.window_size:],
+                                                                upper_limits=np.quantile(forecast, q=0.9, axis=-1),
+                                                                lower_limits=np.quantile(forecast, q=0.1, axis=-1)))
+    print('95%-prediction interval coverage:', compute_coverage(actual_values=data[gan.window_size:],
+                                                                upper_limits=np.quantile(forecast, q=0.975, axis=-1),
+                                                                lower_limits=np.quantile(forecast, q=0.025, axis=-1)))
     print_coverage(mean=forecast_mean[:, 0], uncertainty=forecast_std[:, 0], actual_values=data[gan.window_size:])
 
 
@@ -164,7 +170,7 @@ def pipeline():
     cfg = load_config_file('config\\config.yml')
     gan = configure_model(model_name=cfg['gan']['model_name'])
     train, test = load_data(cfg=cfg['data'], window_size=gan.window_size)
-    trained_gan = train_gan(gan=gan, data=train, epochs=500, batch_size=512, discriminator_epochs=3)
+    trained_gan = train_gan(gan=gan, data=train, epochs=800, batch_size=1024, discriminator_epochs=2)
     test_model(gan=trained_gan, data=test, mc_forward_passes=500)
 
 

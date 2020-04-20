@@ -13,10 +13,10 @@ class ConvWGAN(ConvGAN):
     def __init__(self):
         ConvGAN.__init__(self)
         self.plot_rate = 25
-        self.plot_folder = 'ConvWGAN/64'
+        self.plot_folder = 'ConvWGAN'
         self.noise_vector_size = 100  # Try larger vector
 
-        self.optimizer = RMSprop(lr=0.0001)
+        self.optimizer = RMSprop(lr=0.000003)
         self.loss_function = self.wasserstein_loss
 
     def wasserstein_loss(self, y_true, y_pred):
@@ -87,6 +87,6 @@ class ConvWGAN(ConvGAN):
 if __name__ == '__main__':
     gan = ConvWGAN()
     gan.build_gan()
-    gan.train(epochs=10000, batch_size=128, discriminator_epochs=3)
+    gan.train(epochs=15000, batch_size=128, discriminator_epochs=2)
     gan.monte_carlo_forecast(data=generate_noise(gan.window_size+gan.forecasting_horizon),
                              steps=1, mc_forward_passes=5000, plot=True)
