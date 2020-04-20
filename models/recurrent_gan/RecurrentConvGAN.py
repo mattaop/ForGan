@@ -185,6 +185,67 @@ class RecurrentConvGAN(GAN):
         plt.legend()
         plt.show()
 
+    def fit(self, x, y, epochs=1, batch_size=32, discriminator_epochs=1):
+        half_batch = int(batch_size / 2)
+        forecast_mse = np.zeros(epochs)
+        G_loss = np.zeros(epochs)
+        D_loss = np.zeros(epochs)
+
+        for epoch in range(epochs):
+
+            # ---------------------
+            #  Train Discriminator
+            # ---------------------
+            for d_epochs in range(discriminator_epochs):
+                # Select a random half batch of images
+                idx = np.random.randint(0, x.shape[0], half_batch)
+                historic_time_series = x[idx]
+                future_time_series = y[idx]
+
+                generator_noise = self._generate_noise(half_batch)  # Normalisere til 1
+
+                # Generate a half batch of new images
+                gen_forecasts = self.generator.predict([historic_time_series, generator_noise])
+
+                # Train the discriminator
+                d_loss_real = self.discriminator.train_on_batch([historic_time_series, future_time_series],
+                                                                self._get_labels(batch_size=half_batch, real=True))
+                d_loss_fake = self.discriminator.train_on_batch([historic_time_series,
+                                                                tf.keras.backend.expand_dims(gen_forecasts, axis=-1)],
+                                                                self._get_labels(batch_size=half_batch, real=False))
+                d_loss = 0.5 * np.add(d_loss_real, d_loss_fake)
+
+            # ---------------------
+            #  Train Generator
+            # ---------------------
+
+            generator_noise = self._generate_noise(batch_size)
+
+            # The generator wants the discriminator to label the generated samples
+            # as valid (ones)
+            valid_y = np.array([1] * batch_size)
+
+            idx = np.random.randint(0, x.shape[0], batch_size)
+            historic_time_series = x[idx]
+            # Train the generator
+            g_loss = self.combined.train_on_batch([historic_time_series, generator_noise], valid_y)
+
+            # Measure forecast MSE of generator
+            forecast_mse[epoch] = mean_squared_error(future_time_series[:, :, 0], gen_forecasts)
+            # kl_divergence[epoch] = sum(self.kl_divergence(future_time_series[:, i, 0], gen_forecasts[:, i])
+            #                           for i in range(self.forecasting_horizon))/self.forecasting_horizon
+            G_loss[epoch] = g_loss
+            D_loss[epoch] = d_loss[0]
+            # Plot the progress
+            print("%d [D loss: %f, acc.: %.2f%%] [G loss: %f, forecast mse: %f]" %
+                  (epoch, d_loss[0], 100 * d_loss[1], g_loss, forecast_mse[epoch]))
+            # print("KL-divergence: ", kl_divergence[epoch])
+
+            if epoch % self.plot_rate == 0:
+                self.plot_distributions(future_time_series[:, :, 0], gen_forecasts,
+                                        f'ims/' + self.plot_folder + f'/epoch{epoch:03d}.png')
+        return {'mse': [forecast_mse], 'G_loss': [G_loss], 'D_loss': [D_loss], 'Accuracy': [100 * d_loss[1]]}
+
     def forecast(self, steps=1):
         # time_series = generate_arp_data(5, 600, self.window_size+self.forecasting_horizon+steps-1)
         time_series = generate_noise(self.window_size + self.forecasting_horizon + steps - 1)

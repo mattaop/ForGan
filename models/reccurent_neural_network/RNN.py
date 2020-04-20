@@ -56,8 +56,7 @@ class RNN:
         plt.show()
 
     def forecast(self, data):
-        forecast = self.model.predict(data)
-        return forecast
+        return self.model.predict(data)
 
     def monte_carlo_forecast(self, data, steps=1, mc_forward_passes=500, plot=False):
         time_series = np.expand_dims(data, axis=0)

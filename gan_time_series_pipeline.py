@@ -63,87 +63,47 @@ def scale_data(train, test):
     return train, test
 
 
+def compute_validation_error(model, data):
+    # Split validation data into (x_t-l, ..., x_t), (x_t+1) pairs
+    x_val, y_val = split_sequence(data, model.window_size, model.forecasting_horizon)
+
+    # Compute inherent noise on validation set
+    y_predicted = model.forecast(x_val)
+    inherent_noise = mean_squared_error(y_val[:, :, 0], y_predicted)
+    return inherent_noise
+
+
 def train_gan(gan, data, epochs, batch_size=128, discriminator_epochs=1):
-    # Load the data
-    x_train, y_train = split_sequence(data, gan.window_size, gan.forecasting_horizon)
+    # Split data in training and validation set
+    train, val = data[:-int(len(data)*0.1)], data[-int(gan.window_size+len(data)*0.1):]
 
-    half_batch = int(batch_size / 2)
-    forecast_mse = np.zeros(epochs)
-    G_loss = np.zeros(epochs)
-    D_loss = np.zeros(epochs)
+    # Split training data into (x_t-l, ..., x_t), (x_t+1) pairs
+    x_train, y_train = split_sequence(train, gan.window_size, gan.forecasting_horizon)
 
-    for epoch in range(epochs):
+    history = gan.fit(x_train, y_train, epochs=epochs, batch_size=batch_size, discriminator_epochs=discriminator_epochs)
 
-        # ---------------------
-        #  Train Discriminator
-        # ---------------------
-        for d_epochs in range(discriminator_epochs):
-            # Select a random half batch of images
-            idx = np.random.randint(0, x_train.shape[0], half_batch)
-            historic_time_series = x_train[idx]
-            future_time_series = y_train[idx]
-
-            noise = gan._generate_noise(half_batch)  # Normalisere til 1
-
-            # Generate a half batch of new images
-            gen_forecasts = gan.generator.predict([historic_time_series, noise])
-
-            # Train the discriminator
-            d_loss_real = gan.discriminator.train_on_batch([historic_time_series, future_time_series],
-                                                           gan._get_labels(batch_size=half_batch, real=True))
-            d_loss_fake = gan.discriminator.train_on_batch([historic_time_series,
-                                                             tf.keras.backend.expand_dims(gen_forecasts, axis=-1)],
-                                                           gan._get_labels(batch_size=half_batch, real=False))
-            d_loss = 0.5 * np.add(d_loss_real, d_loss_fake)
-
-        # ---------------------
-        #  Train Generator
-        # ---------------------
-
-        noise = gan._generate_noise(batch_size)
-
-        # The generator wants the discriminator to label the generated samples
-        # as valid (ones)
-        valid_y = np.array([1] * batch_size)
-
-        idx = np.random.randint(0, x_train.shape[0], batch_size)
-        historic_time_series = x_train[idx]
-        # Train the generator
-        g_loss = gan.combined.train_on_batch([historic_time_series, noise], valid_y)
-
-        # Measure forecast MSE of generator
-        forecast_mse[epoch] = mean_squared_error(future_time_series[:, :, 0], gen_forecasts)
-        # kl_divergence[epoch] = sum(self.kl_divergence(future_time_series[:, i, 0], gen_forecasts[:, i])
-        #                           for i in range(self.forecasting_horizon))/self.forecasting_horizon
-        G_loss[epoch] = g_loss
-        D_loss[epoch] = d_loss[0]
-        # Plot the progress
-        print("%d [D loss: %f, acc.: %.2f%%] [G loss: %f, forecast mse: %f]" %
-              (epoch, d_loss[0], 100 * d_loss[1], g_loss, forecast_mse[epoch]))
-        # print("KL-divergence: ", kl_divergence[epoch])
-
-        if epoch % gan.plot_rate == 0:
-            gan.plot_distributions(future_time_series[:, :, 0], gen_forecasts,
-                                   f'ims/' + gan.plot_folder + f'/epoch{epoch:03d}.png')
-
+    validation_error = compute_validation_error(gan, val)
     plt.figure()
-    plt.plot(np.linspace(1, epochs, epochs), forecast_mse, label='Forecast error generator')
+    plt.plot(np.linspace(1, epochs, epochs), history['mse'], label='Forecast MSE generator')
     plt.legend()
     plt.show()
 
     plt.figure()
-    plt.plot(np.linspace(1, epochs, epochs), G_loss, label='Generator loss')
-    plt.plot(np.linspace(1, epochs, epochs), D_loss, label='Discriminator loss')
+    plt.plot(np.linspace(1, epochs, epochs), history['G_loss'], label='Generator loss')
+    plt.plot(np.linspace(1, epochs, epochs), history['D_loss'], label='Discriminator loss')
     plt.legend()
     plt.show()
 
-    return gan
+    return gan, validation_error
 
 
-def test_model(gan, data, mc_forward_passes=500):
+def test_model(gan, data, validation_error, mc_forward_passes=500):
     forecast = gan.monte_carlo_forecast(data, int(len(data)-gan.window_size), mc_forward_passes)  # steps x horizon x mc_forward_passes
     forecast_mean = forecast.mean(axis=-1)
     forecast_std = forecast.std(axis=-1)
+    forecast_var = forecast.var(axis=-1)
+
+    total_uncertainty = np.sqrt(forecast_var + validation_error)
 
     x_pred = np.linspace(gan.window_size+1, len(data), len(data)-gan.window_size)
     plt.figure()
@@ -157,6 +117,7 @@ def test_model(gan, data, mc_forward_passes=500):
     plt.show()
     print('Forecast error:', mean_squared_error(data[gan.window_size:], forecast_mean[:, 0]))
     print('Mean forecast standard deviation:', forecast_std.mean(axis=0))
+    print('Mean total forecast standard deviation:', total_uncertainty.mean(axis=0))
     print('80%-prediction interval coverage:', compute_coverage(actual_values=data[gan.window_size:],
                                                                 upper_limits=np.quantile(forecast, q=0.9, axis=-1),
                                                                 lower_limits=np.quantile(forecast, q=0.1, axis=-1)))
@@ -164,14 +125,16 @@ def test_model(gan, data, mc_forward_passes=500):
                                                                 upper_limits=np.quantile(forecast, q=0.975, axis=-1),
                                                                 lower_limits=np.quantile(forecast, q=0.025, axis=-1)))
     print_coverage(mean=forecast_mean[:, 0], uncertainty=forecast_std[:, 0], actual_values=data[gan.window_size:])
+    print_coverage(mean=forecast_mean[:, 0], uncertainty=total_uncertainty[:, 0], actual_values=data[gan.window_size:])
+
 
 
 def pipeline():
     cfg = load_config_file('config\\config.yml')
     gan = configure_model(model_name=cfg['gan']['model_name'])
     train, test = load_data(cfg=cfg['data'], window_size=gan.window_size)
-    trained_gan = train_gan(gan=gan, data=train, epochs=800, batch_size=256, discriminator_epochs=2)
-    test_model(gan=trained_gan, data=test, mc_forward_passes=500)
+    trained_gan, validation_error = train_gan(gan=gan, data=train, epochs=800, batch_size=256, discriminator_epochs=2)
+    test_model(gan=trained_gan, data=test, validation_error=validation_error, mc_forward_passes=500)
 
 
 if __name__ == '__main__':
