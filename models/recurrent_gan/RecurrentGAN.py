@@ -186,26 +186,25 @@ class RecurrentGAN(GAN):
         plt.show()
         print('Forecast error:', mean_squared_error(time_series[0, -len(forecast):], forecast))
 
-    def monte_carlo_forecast(self, steps=1, mc_forward_passes=500):
-        # time_series = generate_arp_data(5, 600, self.window_size+self.forecasting_horizon+steps-1)
-        time_series = generate_noise(self.window_size + self.forecasting_horizon + steps - 1)
-        time_series = np.expand_dims(time_series, axis=0)
+    def monte_carlo_forecast(self, data, steps=1, mc_forward_passes=500, plot=False):
+        time_series = np.expand_dims(data, axis=0)
         forecast = np.zeros([steps, self.forecasting_horizon, mc_forward_passes])
         for i in tqdm(range(steps)):
             for j in range(mc_forward_passes):
                 noise = self._generate_noise(1)
                 forecast[i, :, j] = self.generator.predict([time_series[:, i:self.window_size + i], noise])[0]
-        plt.figure()
-        plt.plot(np.linspace(1, len(time_series[0]), len(time_series[0])), time_series[0], label='real data')
-        plt.plot(np.linspace(self.window_size, self.window_size + steps, steps), forecast.mean(axis=2)[:, 0], label='forecasted data')
-        plt.legend()
-        plt.show()
-
-        print('Forecast error:', mean_squared_error(time_series[0, -len(forecast):], forecast.mean(axis=2)[:, 0]))
-        print('Forecast standard deviation', np.mean(forecast.std(axis=2)[:, 0], axis=0))
-        print('KL-divergence:', self.kl_divergence(generate_noise(len(forecast[0, 0])).values[0], forecast[0, 0]))
-
-        self.plot_distributions(real_samples=generate_noise(mc_forward_passes), fake_samples=forecast[0, 0])
+        if plot:
+            plt.figure()
+            plt.plot(np.linspace(1, len(data[0]), len(data[0])), data[0], label='real data')
+            plt.plot(np.linspace(self.window_size, self.window_size + steps, steps), forecast.mean(axis=2)[:, 0],
+                     label='forecasted data')
+            plt.legend()
+            plt.show()
+            print('Forecast error:',
+                  mean_squared_error(time_series[0, -len(forecast):], forecast.mean(axis=2)[:, 0]))
+            print('Forecast standard deviation', np.mean(forecast.std(axis=2)[:, 0], axis=0))
+            self.plot_distributions(real_samples=generate_noise(mc_forward_passes), fake_samples=forecast[0, 0])
+        return forecast
 
 
 if __name__ == '__main__':
