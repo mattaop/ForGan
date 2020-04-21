@@ -98,7 +98,7 @@ def train_gan(gan, data, epochs, batch_size=128, discriminator_epochs=1):
     return gan, validation_error
 
 
-def test_model(gan, data, validation_error, mc_forward_passes=500):
+def test_model(gan, data, validation_error, mc_forward_passes=1000):
     forecast = gan.monte_carlo_forecast(data, int(len(data)-gan.window_size), mc_forward_passes)  # steps x horizon x mc_forward_passes
     forecast_mean = forecast.mean(axis=-1)
     forecast_std = forecast.std(axis=-1)
@@ -116,7 +116,8 @@ def test_model(gan, data, validation_error, mc_forward_passes=500):
                      alpha=0.2, edgecolor='#CC4F1B', facecolor='#FF9848', label='95%-PI')
     plt.legend()
     plt.show()
-    print('Forecast error:', mean_squared_error(data[gan.window_size:], forecast_mean[:, 0]))
+    print('Forecast MSE:', mean_squared_error(data[gan.window_size:], forecast_mean[:, 0]))
+    print('Validation MSE:', validation_error)
     print('Mean forecast standard deviation:', forecast_std.mean(axis=0))
     print('Mean total forecast standard deviation:', total_uncertainty.mean(axis=0))
     print('80%-prediction interval coverage:', compute_coverage(actual_values=data[gan.window_size:],
@@ -133,7 +134,7 @@ def pipeline():
     cfg = load_config_file('config\\config.yml')
     gan = configure_model(model_name=cfg['gan']['model_name'])
     train, test = load_data(cfg=cfg['data'], window_size=gan.window_size)
-    trained_gan, validation_error = train_gan(gan=gan, data=train, epochs=500, batch_size=256, discriminator_epochs=2)
+    trained_gan, validation_error = train_gan(gan=gan, data=train, epochs=10000, batch_size=256, discriminator_epochs=1)
     test_model(gan=trained_gan, data=test, validation_error=validation_error, mc_forward_passes=500)
 
 

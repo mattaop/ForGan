@@ -64,11 +64,13 @@ class RecurrentConvGAN(GAN):
         noise_inp = Input(shape=noise_shape)
         historic_inp = Input(shape=historic_shape)
 
-        hist = SimpleRNN(32, return_sequences=False)(historic_inp)
+        hist = LSTM(64, return_sequences=True)(historic_inp)
+        hist = LSTM(64, return_sequences=False)(hist)
+
         # hist = ReLU()(hist)
 
         x = Concatenate(axis=1)([hist, noise_inp])
-        x = BatchNormalization()(x)
+        # x = BatchNormalization()(x)
         x = Dense(32)(x)
         x = ReLU()(x)
         prediction = Dense(self.forecasting_horizon)(x)
@@ -271,8 +273,8 @@ class RecurrentConvGAN(GAN):
         forecast = np.zeros([steps, self.forecasting_horizon, mc_forward_passes])
         for i in tqdm(range(steps)):
             for j in range(mc_forward_passes):
-                noise = self._generate_noise(1)
-                forecast[i, :, j] = self.generator.predict([time_series[:, i:self.window_size + i], noise])[0]
+                generator_noise = self._generate_noise(1)
+                forecast[i, :, j] = self.generator.predict([time_series[:, i:self.window_size + i], generator_noise])[0]
         if plot:
             plt.figure()
             plt.plot(np.linspace(1, len(data[0]), len(data[0])), data[0], label='real data')
