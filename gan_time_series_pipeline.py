@@ -47,7 +47,7 @@ def configure_model(model_name):
 
 def load_data(cfg, window_size):
     if cfg['data_source'].lower() == 'sine':
-        data = generate_sine_data(num_points=5000)
+        data = generate_sine_data(num_points=500)
     else:
         return None
     train = data[:-int(len(data)*cfg['test_split'])]
@@ -83,6 +83,7 @@ def train_gan(gan, data, epochs, batch_size=128, discriminator_epochs=1):
     history = gan.fit(x_train, y_train, epochs=epochs, batch_size=batch_size, discriminator_epochs=discriminator_epochs)
 
     validation_error = compute_validation_error(gan, val)
+
     plt.figure()
     plt.plot(np.linspace(1, epochs, epochs), history['mse'], label='Forecast MSE generator')
     plt.legend()
@@ -128,12 +129,11 @@ def test_model(gan, data, validation_error, mc_forward_passes=500):
     print_coverage(mean=forecast_mean[:, 0], uncertainty=total_uncertainty[:, 0], actual_values=data[gan.window_size:])
 
 
-
 def pipeline():
     cfg = load_config_file('config\\config.yml')
     gan = configure_model(model_name=cfg['gan']['model_name'])
     train, test = load_data(cfg=cfg['data'], window_size=gan.window_size)
-    trained_gan, validation_error = train_gan(gan=gan, data=train, epochs=800, batch_size=1024, discriminator_epochs=2)
+    trained_gan, validation_error = train_gan(gan=gan, data=train, epochs=500, batch_size=256, discriminator_epochs=2)
     test_model(gan=trained_gan, data=test, validation_error=validation_error, mc_forward_passes=500)
 
 
