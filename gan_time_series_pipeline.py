@@ -69,6 +69,8 @@ def compute_validation_error(model, data):
 
     # Compute inherent noise on validation set
     y_predicted = model.forecast(x_val)
+    print(y_predicted.shape)
+    print(y_val.shape)
     inherent_noise = mean_squared_error(y_val[:, :, 0], y_predicted)
     return inherent_noise
 
