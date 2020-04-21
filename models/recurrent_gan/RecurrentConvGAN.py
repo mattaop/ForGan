@@ -244,13 +244,27 @@ class RecurrentConvGAN(GAN):
             if epoch % self.plot_rate == 0:
                 self.plot_distributions(future_time_series[:, :, 0], gen_forecasts,
                                         f'ims/' + self.plot_folder + f'/epoch{epoch:03d}.png')
-        return {'mse': [forecast_mse], 'G_loss': [G_loss], 'D_loss': [D_loss], 'Accuracy': [100 * d_loss[1]]}
+        return {'mse': forecast_mse, 'G_loss': G_loss, 'D_loss': D_loss, 'Accuracy': 100 * d_loss[1]}
 
     def forecast(self, x):
-        # time_series = generate_arp_data(5, 600, self.window_size+self.forecasting_horizon+steps-1)
-
         generator_noise = self._generate_noise(batch_size=x.shape[0])
-        return self.generator.predict([x, generator_noise])[0]
+        return self.generator.predict([x, generator_noise])
+        """
+        # time_series = generate_arp_data(5, 600, self.window_size+self.forecasting_horizon+steps-1)
+        time_series = generate_noise(self.window_size + self.forecasting_horizon + steps - 1)
+        time_series = np.expand_dims(time_series, axis=0)
+        forecast = np.zeros([steps, self.forecasting_horizon])
+        for i in range(steps):
+            noise = self._generate_noise(1)
+            forecast[i] = self.generator.predict([time_series[:, i:self.window_size + i], noise])[0]
+        plt.figure()
+        plt.plot(np.linspace(1, len(time_series[0]), len(time_series[0])), time_series[0], label='real data')
+        plt.plot(np.linspace(self.window_size, self.window_size + self.forecasting_horizon + steps - 1,
+                             self.forecasting_horizon + steps - 1), forecast, label='forecasted data')
+        plt.legend()
+        plt.show()
+        print('Forecast error:', mean_squared_error(time_series[0, -len(forecast):], forecast))
+        """
 
     def monte_carlo_forecast(self, data, steps=1, mc_forward_passes=500, plot=False):
         time_series = np.expand_dims(data, axis=0)
