@@ -2,5 +2,5 @@ gan:
   model_name: RecurrentConvWGAN # GAN, WGAN, ConvGAN, ConvWGAN, RecurrentGAN, RecurrentWGAN, RecurrentConvGAN, RecurrentConvWGAN
 
 data:
-  data_source: sine # sine, airpassengers
+  data_source: oslo # sine, oslo
   test_split: 0.2
