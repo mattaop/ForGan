@@ -29,6 +29,7 @@ from config.load_config import load_config_file
 from models.get_model import get_GAN
 from utility.split_data import split_sequence
 from data.generate_sine import generate_sine_data
+from data.load_data import load_oslo_temperature
 from utility.compute_coverage import print_coverage, compute_coverage
 
 
@@ -48,8 +49,11 @@ def configure_model(model_name):
 def load_data(cfg, window_size):
     if cfg['data_source'].lower() == 'sine':
         data = generate_sine_data(num_points=500)
+    elif cfg['data_source'].lower() == 'oslo':
+        data = load_oslo_temperature()
     else:
         return None
+    print(data.shape)
     train = data[:-int(len(data)*cfg['test_split'])]
     test = data[-int(len(data)*cfg['test_split']+window_size):]
     train, test = scale_data(train, test)
