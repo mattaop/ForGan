@@ -19,7 +19,7 @@ class RecurrentConvGAN(GAN):
         GAN.__init__(self)
         self.plot_rate = 100
         self.plot_folder = 'RecurrentConvGAN'
-        self.window_size = 24
+        self.window_size = 24*6
         self.forecasting_horizon = 1
         self.noise_vector_size = 100  # Try larger vector
 
