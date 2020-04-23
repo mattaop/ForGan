@@ -1,12 +1,15 @@
 import pandas as pd
+from config.load_config import get_path
 
 
 def load_raw_data(file_name=''):
-    return pd.read_csv('C://Users//mathi//PycharmProjects//gan//data//' + file_name, header=0, index_col=0)
+    path = get_path()
+    return pd.read_csv(path['project path'] + 'data//' + file_name, header=0, index_col=0)
 
 
 def load_oslo_temperature():
-    df = pd.read_csv('C://Users//mathi//PycharmProjects//gan//data//OsloTemperature.csv',
+    path = get_path()
+    df = pd.read_csv(path['project path'] + 'data//OsloTemperature.csv',
                      header=0, sep=';', index_col=0)
     df.set_index('time', inplace=True)
     df.drop(columns=['station', 'id', 'max(air_temperature P1M)', 'min(air_temperature P1M)'], inplace=True)
