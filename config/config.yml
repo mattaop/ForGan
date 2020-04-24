@@ -1,5 +1,5 @@
 gan:
-  model_name: RecurrentConvGAN # GAN, WGAN, ConvGAN, ConvWGAN, RecurrentGAN, RecurrentWGAN, RecurrentConvGAN, RecurrentConvWGAN
+  model_name: RecurrentConvWGAN # GAN, WGAN, ConvGAN, ConvWGAN, RecurrentGAN, RecurrentWGAN, RecurrentConvGAN, RecurrentConvWGAN
 
 data:
   data_source: oslo # sine, oslo
