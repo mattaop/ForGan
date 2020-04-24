@@ -20,7 +20,7 @@ class RecurrentConvGAN(GAN):
         self.plot_rate = 100
         self.plot_folder = 'RecurrentConvGAN'
         self.window_size = 24*6
-        self.forecasting_horizon = 1
+        self.forecasting_horizon = 12
         self.noise_vector_size = 100  # Try larger vector
 
         self.optimizer = Adam(0.0005, 0.5)
@@ -248,33 +248,34 @@ class RecurrentConvGAN(GAN):
                                         f'ims/' + self.plot_folder + f'/epoch{epoch:03d}.png')
         return {'mse': forecast_mse, 'G_loss': G_loss, 'D_loss': D_loss, 'Accuracy': 100 * d_loss[1]}
 
-    def forecast(self, x):
-        generator_noise = self._generate_noise(batch_size=x.shape[0])
-        return self.generator.predict([x, generator_noise])
-        """
-        # time_series = generate_arp_data(5, 600, self.window_size+self.forecasting_horizon+steps-1)
-        time_series = generate_noise(self.window_size + self.forecasting_horizon + steps - 1)
-        time_series = np.expand_dims(time_series, axis=0)
-        forecast = np.zeros([steps, self.forecasting_horizon])
-        for i in range(steps):
-            noise = self._generate_noise(1)
-            forecast[i] = self.generator.predict([time_series[:, i:self.window_size + i], noise])[0]
-        plt.figure()
-        plt.plot(np.linspace(1, len(time_series[0]), len(time_series[0])), time_series[0], label='real data')
-        plt.plot(np.linspace(self.window_size, self.window_size + self.forecasting_horizon + steps - 1,
-                             self.forecasting_horizon + steps - 1), forecast, label='forecasted data')
-        plt.legend()
-        plt.show()
-        print('Forecast error:', mean_squared_error(time_series[0, -len(forecast):], forecast))
-        """
+    def forecast(self, x, forward_passes=500):
+        forecast = np.zeros([forward_passes, x.shape[0], self.forecasting_horizon])
+        for i in tqdm(range(forward_passes)):
+            generator_noise = self._generate_noise(batch_size=x.shape[0])
+            forecast[i] = self.generator.predict([x, generator_noise])
+        return forecast.mean(axis=0)
+
+    def recurrent_forecast(self, time_series):
+        forecast = np.zeros(self.forecasting_horizon)
+        x_input = [x for x in time_series]
+        for i in range(self.forecasting_horizon):
+            generator_noise = self._generate_noise(1)
+            print(self.generator.predict([x_input[-self.forecasting_horizon:], generator_noise])[0])
+            forecast[i] = self.generator.predict([x_input[-self.forecasting_horizon:], generator_noise])[0]
+            x_input.append(forecast[i])
+        return forecast
 
     def monte_carlo_forecast(self, data, steps=1, mc_forward_passes=500, plot=False):
         time_series = np.expand_dims(data, axis=0)
         forecast = np.zeros([steps, self.forecasting_horizon, mc_forward_passes])
         for i in tqdm(range(steps)):
-            for j in range(mc_forward_passes):
-                generator_noise = self._generate_noise(1)
-                forecast[i, :, j] = self.generator.predict([time_series[:, i:self.window_size + i], generator_noise])[0]
+            #for j in range(mc_forward_passes):
+                #generator_noise = self._generate_noise(batch_size=1)
+                #forecast[i, :, j] = self.generator.predict([time_series[:, i:self.window_size + i], generator_noise])[0]
+                #forecast[i, :, j] = self.recurrent_forecast(time_series[:, i:self.window_size + i])
+            generator_noise = self._generate_noise(batch_size=mc_forward_passes)
+            x_input = np.vstack([time_series[:, i:self.window_size + i]]*mc_forward_passes)
+            forecast[i, :, :] = self.generator.predict([x_input, generator_noise]).transpose()
         if plot:
             plt.figure()
             plt.plot(np.linspace(1, len(data[0]), len(data[0])), data[0], label='real data')
