@@ -13,13 +13,13 @@ from data.generate_noise import generate_noise
 
 
 class GAN:
-    def __init__(self):
+    def __init__(self, cfg):
         self.plot_rate = 100
         self.plot_folder = 'feed_forward_GAN'
         self.noise_vector_size = 10  # Try larger vector
         self.noise_type = 'normal'  # uniform
 
-        self.optimizer = Adam(lr=0.0005, beta_1=0.5)
+        self.optimizer = Adam(lr=cfg['learning_rate'], beta_1=0.5)
         self.loss_function = 'binary_crossentropy'
 
         # Layer that add a dimension as the last axis

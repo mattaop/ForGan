@@ -17,15 +17,15 @@ from models.feed_forward_gan.GAN import GAN
 
 
 class ConvGAN(GAN):
-    def __init__(self):
-        GAN.__init__(self)
-        self.plot_rate = 25
+    def __init__(self, cfg):
+        GAN.__init__(self, cfg)
+        self.plot_rate = cfg['plot_rate']
         self.plot_folder = 'ConvGAN'
-        self.window_size = 24
-        self.forecasting_horizon = 1
+        self.window_size = cfg['window_size']
+        self.forecasting_horizon = cfg['forecast_horizon']
         self.noise_vector_size = 100  # Try larger vector
 
-        self.optimizer = RAdam(lr=0.001)
+        self.optimizer = RAdam(lr=cfg['learning_rate'])
         self.loss_function = 'binary_crossentropy'
 
     def build_gan(self):

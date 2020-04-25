@@ -10,13 +10,13 @@ from utility.ClipConstraint import ClipConstraint
 
 
 class WGAN(GAN):
-    def __init__(self):
-        GAN.__init__(self)
+    def __init__(self, cfg):
+        GAN.__init__(self, cfg)
         self.plot_rate = 100
         self.plot_folder = 'feed_forward_WGAN'
         self.noise_vector_size = 100  # Try larger vector
 
-        self.optimizer = RMSprop(lr=0.002)
+        self.optimizer = RMSprop(lr=cfg['learning_rate'])
         self.loss_function = self.wasserstein_loss
 
     def wasserstein_loss(self, y_true, y_pred):

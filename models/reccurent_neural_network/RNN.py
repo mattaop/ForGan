@@ -63,8 +63,10 @@ class RNN:
         forecast = np.zeros([steps, self.forecasting_horizon, mc_forward_passes])
         func = K.function([self.model.layers[0].input, K.learning_phase()], [self.model.layers[-1].output])
         for i in tqdm(range(steps)):
-            for j in range(mc_forward_passes):
-                forecast[i, :, j] = func([time_series[:, i:self.window_size + i], 0.4])[0]
+            x_input = np.vstack([time_series[:, i:self.window_size + i]]*mc_forward_passes)
+            forecast[i] = func([x_input, 0.4])
+            #for j in range(mc_forward_passes):
+             #   forecast[i, :, j] = func([time_series[:, i:self.window_size + i], 0.4])[0]
         if plot:
             plt.figure()
             plt.plot(np.linspace(1, len(data[0]), len(data[0])), data[0], label='real data')

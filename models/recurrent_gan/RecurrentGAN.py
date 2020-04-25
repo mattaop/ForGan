@@ -14,15 +14,15 @@ from models.feed_forward_gan.GAN import GAN
 
 
 class RecurrentGAN(GAN):
-    def __init__(self):
-        GAN.__init__(self)
+    def __init__(self, cfg):
+        GAN.__init__(self, cfg)
         self.plot_folder = 'RecurrentGAN'
-        self.window_size = 24
-        self.forecasting_horizon = 1
+        self.window_size = cfg['window_size']
+        self.forecasting_horizon = cfg['forecast_horizon']
         self.noise_vector_size = 50  # Try larger vector
         self.noise_type = 'normal'  # uniform
 
-        self.optimizer = Adam(0.001, 0.5)
+        self.optimizer = Adam(cfg['learning_rate'], 0.5)
         self.loss_function = 'binary_crossentropy'
 
     def build_gan(self):
@@ -231,19 +231,25 @@ class RecurrentGAN(GAN):
                                         f'ims/' + self.plot_folder + f'/epoch{epoch:03d}.png')
         return {'mse': [forecast_mse], 'G_loss': [G_loss], 'D_loss': [D_loss], 'Accuracy': [100 * d_loss[1]]}
 
-    def forecast(self, x):
-        # time_series = generate_arp_data(5, 600, self.window_size+self.forecasting_horizon+steps-1)
-
-        generator_noise = self._generate_noise(batch_size=x.shape[0])
-        return self.generator.predict([x, generator_noise])[0]
+    def forecast(self, x, forward_passes=500):
+        forecast = np.zeros([x.shape[0], forward_passes, self.forecasting_horizon])
+        for i in tqdm(range(x.shape[0])):
+            generator_noise = self._generate_noise(batch_size=forward_passes)
+            x_input = np.vstack([x[i]] * forward_passes)
+            forecast[i] = self.generator.predict([x_input, generator_noise])
+        return forecast.mean(axis=1)
 
     def monte_carlo_forecast(self, data, steps=1, mc_forward_passes=500, plot=False):
         time_series = np.expand_dims(data, axis=0)
         forecast = np.zeros([steps, self.forecasting_horizon, mc_forward_passes])
         for i in tqdm(range(steps)):
-            for j in range(mc_forward_passes):
-                noise = self._generate_noise(1)
-                forecast[i, :, j] = self.generator.predict([time_series[:, i:self.window_size + i], noise])[0]
+            # for j in range(mc_forward_passes):
+            # generator_noise = self._generate_noise(batch_size=1)
+            # forecast[i, :, j] = self.generator.predict([time_series[:, i:self.window_size + i], generator_noise])[0]
+            # forecast[i, :, j] = self.recurrent_forecast(time_series[:, i:self.window_size + i])
+            generator_noise = self._generate_noise(batch_size=mc_forward_passes)
+            x_input = np.vstack([time_series[:, i:self.window_size + i]] * mc_forward_passes)
+            forecast[i, :, :] = self.generator.predict([x_input, generator_noise]).transpose()
         if plot:
             plt.figure()
             plt.plot(np.linspace(1, len(data[0]), len(data[0])), data[0], label='real data')

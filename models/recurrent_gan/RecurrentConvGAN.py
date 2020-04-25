@@ -15,15 +15,22 @@ from models.feed_forward_gan.GAN import GAN
 
 
 class RecurrentConvGAN(GAN):
-    def __init__(self):
-        GAN.__init__(self)
-        self.plot_rate = 100
+    def __init__(self, cfg):
+        GAN.__init__(self, cfg)
+        self.plot_rate = cfg['plot_rate']
         self.plot_folder = 'RecurrentConvGAN'
-        self.window_size = 24
-        self.forecasting_horizon = 12
-        self.noise_vector_size = 100  # Try larger vector
+        self.window_size = cfg['window_size']
+        self.forecasting_horizon = cfg['forecast_horizon']
+        self.recurrent_forecasting = cfg['recurrent_forecasting']
+        if self.recurrent_forecasting:
+            self.output_size = 1
+        else:
+            self.output_size = self.forecasting_horizon
 
-        self.optimizer = Adam(0.0005, 0.5)
+        self.noise_vector_size = 100  # Try larger vector
+        self.mc_forward_passes = cfg['mc_forward_passes']
+
+        self.optimizer = Adam(cfg['learning_rate'], 0.5)
         self.loss_function = 'binary_crossentropy'
 
     def build_gan(self):
@@ -35,7 +42,7 @@ class RecurrentConvGAN(GAN):
         self.generator = self.build_generator()
         self.generator.compile(loss=self.loss_function, optimizer=self.optimizer)
 
-        # The generator takes noise as input and generated imgs
+        # The generator takes noise as input and generated forecasts
         z = Input(shape=(self.noise_vector_size,))
         time_series = Input(shape=(self.window_size, 1))
 
@@ -73,7 +80,7 @@ class RecurrentConvGAN(GAN):
         # x = BatchNormalization()(x)
         x = Dense(32)(x)
         x = ReLU()(x)
-        prediction = Dense(self.forecasting_horizon)(x)
+        prediction = Dense(self.output_size)(x)
 
         model = Model(inputs=[historic_inp, noise_inp], outputs=prediction)
         model.summary()
@@ -81,7 +88,7 @@ class RecurrentConvGAN(GAN):
 
     def build_discriminator(self):
         historic_shape = (self.window_size, 1)
-        future_shape = (self.forecasting_horizon, 1)
+        future_shape = (self.output_size, 1)
 
         historic_inp = Input(shape=historic_shape)
         future_inp = Input(shape=future_shape)
@@ -248,32 +255,34 @@ class RecurrentConvGAN(GAN):
                                         f'ims/' + self.plot_folder + f'/epoch{epoch:03d}.png')
         return {'mse': forecast_mse, 'G_loss': G_loss, 'D_loss': D_loss, 'Accuracy': 100 * d_loss[1]}
 
-    def forecast(self, x, forward_passes=5000):
-        forecast = np.zeros([forward_passes, x.shape[0], self.forecasting_horizon])
-        for i in tqdm(range(forward_passes)):
-            generator_noise = self._generate_noise(batch_size=x.shape[0])
-            forecast[i] = self.generator.predict([x, generator_noise])
-        return forecast.mean(axis=0)
+    def forecast(self, x):
+        forecast = np.zeros([x.shape[0], self.mc_forward_passes, self.forecasting_horizon])
+        for i in tqdm(range(x.shape[0])):
+            generator_noise = self._generate_noise(batch_size=self.mc_forward_passes)
+            x_input = np.vstack([np.expand_dims(x[i], axis=0)] * self.mc_forward_passes)
+            forecast[i] = self.generator.predict([x_input, generator_noise])
+        return forecast.mean(axis=1)
 
     def recurrent_forecast(self, time_series):
         forecast = np.zeros(self.forecasting_horizon)
         x_input = [x for x in time_series]
         for i in range(self.forecasting_horizon):
             generator_noise = self._generate_noise(1)
-            print(self.generator.predict([x_input[-self.forecasting_horizon:], generator_noise])[0])
-            forecast[i] = self.generator.predict([x_input[-self.forecasting_horizon:], generator_noise])[0]
+            print(self.generator.predict([x_input[-self.forecasting_horizon:], generator_noise]).shaoe)
+            forecast[i] = self.generator.predict([x_input[-self.forecasting_horizon:], generator_noise])
             x_input.append(forecast[i])
         return forecast
 
-    def monte_carlo_forecast(self, data, steps=1, mc_forward_passes=500, plot=False):
+    def monte_carlo_forecast(self, data, steps=1, plot=False):
         time_series = np.expand_dims(data, axis=0)
-        forecast = np.zeros([steps, self.forecasting_horizon, mc_forward_passes])
+        forecast = np.zeros([steps, self.forecasting_horizon, self.mc_forward_passes])
         for i in tqdm(range(steps)):
             #for j in range(mc_forward_passes):
                 #generator_noise = self._generate_noise(batch_size=1)
                 #forecast[i, :, j] = self.generator.predict([time_series[:, i:self.window_size + i], generator_noise])[0]
-            generator_noise = self._generate_noise(batch_size=mc_forward_passes)
-            x_input = np.vstack([time_series[:, i:self.window_size + i]]*mc_forward_passes)
+                #forecast[i, :, j] = self.recurrent_forecast(time_series[:, i:self.window_size + i])
+            generator_noise = self._generate_noise(batch_size=self.mc_forward_passes)
+            x_input = np.vstack([time_series[:, i:self.window_size + i]]*self.mc_forward_passes)
             forecast[i, :, :] = self.generator.predict([x_input, generator_noise]).transpose()
         if plot:
             plt.figure()
@@ -285,7 +294,7 @@ class RecurrentConvGAN(GAN):
             print('Forecast error:',
                   mean_squared_error(time_series[0, -len(forecast):], forecast.mean(axis=2)[:, 0]))
             print('Forecast standard deviation', np.mean(forecast.std(axis=2)[:, 0], axis=0))
-            self.plot_distributions(real_samples=generate_noise(mc_forward_passes), fake_samples=forecast[0, 0])
+            self.plot_distributions(real_samples=generate_noise(self.mc_forward_passes), fake_samples=forecast[0, 0])
         return forecast
 
 
@@ -294,5 +303,5 @@ if __name__ == '__main__':
     gan.build_gan()
     gan.train(epochs=500, batch_size=512, discriminator_epochs=1)
     gan.monte_carlo_forecast(data=generate_noise(gan.window_size + gan.forecasting_horizon),
-                             steps=1, mc_forward_passes=5000, plot=True)
+                             steps=1, plot=True)
 

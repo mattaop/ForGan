@@ -10,12 +10,12 @@ from models.feed_forward_gan.WGAN import WGAN
 
 
 class RecurrentWGAN(RecurrentGAN, WGAN):
-    def __init__(self):
-        RecurrentGAN.__init__(self)
-        WGAN.__init__(self)
+    def __init__(self, cfg):
+        RecurrentGAN.__init__(self, cfg)
+        WGAN.__init__(self, cfg)
         self.plot_folder = 'RecurrentWGAN'
 
-        self.optimizer = RMSprop(lr=0.001)
+        self.optimizer = RMSprop(lr=cfg['learning_rate'])
         self.loss_function = self.wasserstein_loss
 
     def build_discriminator(self):

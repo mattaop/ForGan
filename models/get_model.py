@@ -4,33 +4,32 @@ from models.recurrent_gan import RecurrentGAN, RecurrentWGAN, RecurrentConvGAN, 
 from models.reccurent_neural_network import RNN
 
 
-def get_GAN(model_name: str = 'gan')-> {GAN.GAN, WGAN.WGAN, ConvGAN.ConvGAN, ConvWGAN.ConvWGAN,
-                                        RecurrentGAN.RecurrentGAN, RecurrentWGAN.RecurrentWGAN,
-                                        RecurrentConvGAN.RecurrentConvGAN}:
-    if model_name.lower() == 'gan':
+def get_gan(cfg):
+    model_name = cfg['model_name']
+    if model_name.lower() == 'gan' and not cfg['wasserstein_loss']:
         print('Model: GAN')
-        model = GAN.GAN()
-    elif model_name.lower() == 'wgan':
+        model = GAN.GAN(cfg)
+    elif model_name.lower() == 'gan' and cfg['wasserstein_loss']:
         print('Model: WGAN')
-        model = WGAN.WGAN()
-    elif model_name.lower() == 'convgan':
+        model = WGAN.WGAN(cfg)
+    elif model_name.lower() == 'convgan' and not cfg['wasserstein_loss']:
         print('Model: ConvGAN')
-        model = ConvGAN.ConvGAN()
-    elif model_name.lower() == 'convwgan':
+        model = ConvGAN.ConvGAN(cfg)
+    elif model_name.lower() == 'convgan' and cfg['wasserstein_loss']:
         print('Model: ConvWGAN')
-        model = ConvWGAN.ConvWGAN()
-    elif model_name.lower() == 'recurrentgan':
+        model = ConvWGAN.ConvWGAN(cfg)
+    elif model_name.lower() == 'recurrentgan' and not cfg['wasserstein_loss']:
         print('Model: RecurrentGAN')
-        model = RecurrentGAN.RecurrentGAN()
-    elif model_name.lower() == 'recurrentwgan':
+        model = RecurrentGAN.RecurrentGAN(cfg)
+    elif model_name.lower() == 'recurrentgan' and cfg['wasserstein_loss']:
         print('Model: RecurrentWGAN')
-        model = RecurrentWGAN.RecurrentWGAN()
-    elif model_name.lower() == 'recurrentconvgan':
+        model = RecurrentWGAN.RecurrentWGAN(cfg)
+    elif model_name.lower() == 'recurrentconvgan' and not cfg['wasserstein_loss']:
         print('Model: RecurrentConvGAN')
-        model = RecurrentConvGAN.RecurrentConvGAN()
-    elif model_name.lower() == 'recurrentconvwgan':
+        model = RecurrentConvGAN.RecurrentConvGAN(cfg)
+    elif model_name.lower() == 'recurrentconvgan' and cfg['wasserstein_loss']:
         print('Model: RecurrentConvWGAN')
-        model = RecurrentConvWGAN.RecurrentConvWGAN()
+        model = RecurrentConvWGAN.RecurrentConvWGAN(cfg)
     else:
         ImportError('Model ' + model_name + 'not found')
         model = None
