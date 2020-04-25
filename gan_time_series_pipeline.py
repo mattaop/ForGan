@@ -171,7 +171,7 @@ def pipeline():
     cfg = load_config_file('config\\config.yml')
     gan = configure_model(model_name=cfg['gan']['model_name'])
     train, test = load_data(cfg=cfg['data'], window_size=gan.window_size)
-    trained_gan, validation_mse = train_gan(gan=gan, data=train, epochs=10, batch_size=256, discriminator_epochs=1)
+    trained_gan, validation_mse = train_gan(gan=gan, data=train, epochs=1000, batch_size=256, discriminator_epochs=10)
     test_model(gan=trained_gan, data=test, validation_mse=validation_mse, mc_forward_passes=5000)
 
 
