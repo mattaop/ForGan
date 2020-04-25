@@ -10,13 +10,12 @@ from utility.ClipConstraint import ClipConstraint
 
 
 class RecurrentConvWGAN(RecurrentConvGAN):
-    def __init__(self):
-        RecurrentConvGAN.__init__(self)
-        self.plot_rate = 25
+    def __init__(self, cfg):
+        RecurrentConvGAN.__init__(self, cfg)
         self.plot_folder = 'RecurrentConvWGAN'
         self.noise_vector_size = 100  # Try larger vector
 
-        self.optimizer = RMSprop(lr=0.001)
+        self.optimizer = RMSprop(lr=cfg['learning_rate'])
         self.loss_function = self.wasserstein_loss
 
     def wasserstein_loss(self, y_true, y_pred):
@@ -39,7 +38,7 @@ class RecurrentConvWGAN(RecurrentConvGAN):
         x = Dense(32)(x)
         # x = Dropout(0.4)(x)
         x = ReLU()(x)
-        prediction = Dense(self.forecasting_horizon)(x)
+        prediction = Dense(self.output_size)(x)
 
         model = Model(inputs=[historic_inp, noise_inp], outputs=prediction)
         model.summary()
@@ -47,7 +46,7 @@ class RecurrentConvWGAN(RecurrentConvGAN):
 
     def build_discriminator(self):
         historic_shape = (self.window_size, 1)
-        future_shape = (self.forecasting_horizon, 1)
+        future_shape = (self.output_size, 1)
 
         historic_inp = Input(shape=historic_shape)
         future_inp = Input(shape=future_shape)

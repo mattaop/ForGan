@@ -14,15 +14,15 @@ from models.feed_forward_gan.GAN import GAN
 
 
 class RecurrentGAN(GAN):
-    def __init__(self):
-        GAN.__init__(self)
+    def __init__(self, cfg):
+        GAN.__init__(self, cfg)
         self.plot_folder = 'RecurrentGAN'
-        self.window_size = 24
-        self.forecasting_horizon = 1
+        self.window_size = cfg['window_size']
+        self.forecasting_horizon = cfg['forecast_horizon']
         self.noise_vector_size = 50  # Try larger vector
         self.noise_type = 'normal'  # uniform
 
-        self.optimizer = Adam(0.001, 0.5)
+        self.optimizer = Adam(cfg['learning_rate'], 0.5)
         self.loss_function = 'binary_crossentropy'
 
     def build_gan(self):

@@ -26,15 +26,15 @@ from sklearn.metrics import mean_squared_error
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 
 from config.load_config import load_config_file
-from models.get_model import get_GAN
+from models.get_model import get_gan
 from utility.split_data import split_sequence
 from data.generate_sine import generate_sine_data
 from data.load_data import load_oslo_temperature
 from utility.compute_coverage import print_coverage, compute_coverage, sliding_window_coverage, sliding_window_mse
 
 
-def configure_model(model_name):
-    gan = get_GAN(model_name)
+def configure_model(cfg):
+    gan = get_gan(cfg)
     gan.build_gan()
 
     paths = ['ims',
@@ -53,7 +53,7 @@ def load_data(cfg, window_size):
         data = load_oslo_temperature()
     else:
         return None
-    print(data.shape)
+    print('Data shape', data.shape)
     train = data[:-int(len(data)*cfg['test_split'])]
     test = data[-int(len(data)*cfg['test_split']+window_size):]
     train, test = scale_data(train, test)
@@ -82,13 +82,13 @@ def plot_results(y, label, y2=None, y2_label=None, title='', y_label='Value'):
 
 def compute_validation_error(gan, data):
     # Split validation data into (x_t-l, ..., x_t), (x_t+1) pairs
-    x_val, y_val = split_sequence(data, gan.window_size, gan.forecasting_horizon)
+    x_val, y_val = split_sequence(data, gan.window_size, gan.output_size)
 
     # Compute inherent noise on validation set
-    y_predicted = gan.forecast(x_val, forward_passes=5000)
+    y_predicted = gan.forecast(x_val)
 
-    validation_mse = np.zeros(gan.forecasting_horizon)
-    for i in range(gan.forecasting_horizon):
+    validation_mse = np.zeros(gan.output_size)
+    for i in range(gan.output_size):
         validation_mse[i] = mean_squared_error(y_val[:, i], y_predicted[:, i])
     return validation_mse
 
@@ -98,28 +98,30 @@ def train_gan(gan, data, epochs, batch_size=128, discriminator_epochs=1):
     train, val = data[:-int(len(data)*0.1)], data[-int(gan.window_size+len(data)*0.1):]
 
     # Split training data into (x_t-l, ..., x_t), (x_t+1) pairs
-    x_train, y_train = split_sequence(train, gan.window_size, gan.forecasting_horizon)
+    x_train, y_train = split_sequence(train, gan.window_size, gan.output_size)
 
     history = gan.fit(x_train, y_train, epochs=epochs, batch_size=batch_size, discriminator_epochs=discriminator_epochs)
 
     validation_mse = compute_validation_error(gan, val)
 
     plt.figure()
+    plt.title('Training Mean Squared Error')
     plt.plot(np.linspace(1, epochs, epochs), history['mse'], label='Forecast MSE generator')
     plt.legend()
-    plt.show()
+    # plt.show()
 
     plt.figure()
+    plt.title('Training Generator and Discriminator Loss')
     plt.plot(np.linspace(1, epochs, epochs), history['G_loss'], label='Generator loss')
     plt.plot(np.linspace(1, epochs, epochs), history['D_loss'], label='Discriminator loss')
     plt.legend()
-    plt.show()
+    # plt.show()
 
     return gan, validation_mse
 
 
-def test_model(gan, data, validation_mse, mc_forward_passes=1000):
-    forecast = gan.monte_carlo_forecast(data, int(len(data)-gan.window_size), mc_forward_passes)  # steps x horizon x mc_forward_passes
+def test_model(gan, data, validation_mse):
+    forecast = gan.monte_carlo_forecast(data, int(len(data)-gan.window_size))  # steps x horizon x mc_forward_passes
     forecast_mean = forecast.mean(axis=-1)
     forecast_std = forecast.std(axis=-1)
     forecast_var = forecast.var(axis=-1)
@@ -169,10 +171,12 @@ def test_model(gan, data, validation_mse, mc_forward_passes=1000):
 
 def pipeline():
     cfg = load_config_file('config\\config.yml')
-    gan = configure_model(model_name=cfg['gan']['model_name'])
+    gan = configure_model(cfg=cfg['gan'])
     train, test = load_data(cfg=cfg['data'], window_size=gan.window_size)
-    trained_gan, validation_mse = train_gan(gan=gan, data=train, epochs=1000, batch_size=256, discriminator_epochs=10)
-    test_model(gan=trained_gan, data=test, validation_mse=validation_mse, mc_forward_passes=5000)
+    trained_gan, validation_mse = train_gan(gan=gan, data=train, epochs=cfg['gan']['epochs'],
+                                            batch_size=cfg['gan']['batch_size'],
+                                            discriminator_epochs=cfg['gan']['discriminator_epochs'])
+    test_model(gan=trained_gan, data=test, validation_mse=validation_mse)
 
 
 if __name__ == '__main__':

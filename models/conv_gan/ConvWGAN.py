@@ -10,13 +10,13 @@ from utility.ClipConstraint import ClipConstraint
 
 
 class ConvWGAN(ConvGAN):
-    def __init__(self):
-        ConvGAN.__init__(self)
-        self.plot_rate = 25
+    def __init__(self, cfg):
+        ConvGAN.__init__(self, cfg)
+        self.plot_rate = cfg['plot_rate']
         self.plot_folder = 'ConvWGAN'
         self.noise_vector_size = 100  # Try larger vector
 
-        self.optimizer = RMSprop(lr=0.000003)
+        self.optimizer = RMSprop(lr=cfg['learning_rate'])
         self.loss_function = self.wasserstein_loss
 
     def wasserstein_loss(self, y_true, y_pred):
