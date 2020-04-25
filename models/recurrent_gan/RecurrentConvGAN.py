@@ -19,7 +19,7 @@ class RecurrentConvGAN(GAN):
         GAN.__init__(self)
         self.plot_rate = 100
         self.plot_folder = 'RecurrentConvGAN'
-        self.window_size = 24*6
+        self.window_size = 24
         self.forecasting_horizon = 12
         self.noise_vector_size = 100  # Try larger vector
 
@@ -249,11 +249,12 @@ class RecurrentConvGAN(GAN):
         return {'mse': forecast_mse, 'G_loss': G_loss, 'D_loss': D_loss, 'Accuracy': 100 * d_loss[1]}
 
     def forecast(self, x, forward_passes=500):
-        forecast = np.zeros([forward_passes, x.shape[0], self.forecasting_horizon])
-        for i in tqdm(range(forward_passes)):
-            generator_noise = self._generate_noise(batch_size=x.shape[0])
-            forecast[i] = self.generator.predict([x, generator_noise])
-        return forecast.mean(axis=0)
+        forecast = np.zeros([x.shape[0], forward_passes, self.forecasting_horizon])
+        for i in tqdm(range(x.shape[0])):
+            generator_noise = self._generate_noise(batch_size=forward_passes)
+            x_input = np.vstack([np.expand_dims(x[i], axis=0)] * forward_passes)
+            forecast[i] = self.generator.predict([x_input, generator_noise])
+        return forecast.mean(axis=1)
 
     def recurrent_forecast(self, time_series):
         forecast = np.zeros(self.forecasting_horizon)

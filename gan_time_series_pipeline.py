@@ -30,7 +30,7 @@ from models.get_model import get_GAN
 from utility.split_data import split_sequence
 from data.generate_sine import generate_sine_data
 from data.load_data import load_oslo_temperature
-from utility.compute_coverage import print_coverage, compute_coverage, sliding_window_coverage
+from utility.compute_coverage import print_coverage, compute_coverage, sliding_window_coverage, sliding_window_mse
 
 
 def configure_model(model_name):
@@ -67,26 +67,29 @@ def scale_data(train, test):
     return train, test
 
 
-def plot_results(y, title='', y_label='Value'):
+def plot_results(y, label, y2=None, y2_label=None, title='', y_label='Value'):
     x = np.linspace(1, len(y), len(y))
     plt.figure()
     plt.title(title)
-    plt.plot(x, y)
+    plt.plot(x, y, label=label)
+    if y2 is not None:
+        plt.plot(x, y2, label=y2_label)
     plt.ylabel(y_label)
     plt.xlabel('Forecast horizon')
     plt.legend()
     plt.show()
 
 
-def compute_validation_error(model, data):
+def compute_validation_error(gan, data):
     # Split validation data into (x_t-l, ..., x_t), (x_t+1) pairs
-    x_val, y_val = split_sequence(data, model.window_size, model.forecasting_horizon)
+    x_val, y_val = split_sequence(data, gan.window_size, gan.forecasting_horizon)
 
     # Compute inherent noise on validation set
-    y_predicted = model.forecast(x_val)
-    print(y_predicted.shape)
-    print(y_val.shape)
-    validation_mse = mean_squared_error(y_val[:, 0, 0], y_predicted[:, 0])
+    y_predicted = gan.forecast(x_val, forward_passes=5000)
+
+    validation_mse = np.zeros(gan.forecasting_horizon)
+    for i in range(gan.forecasting_horizon):
+        validation_mse[i] = mean_squared_error(y_val[:, i], y_predicted[:, i])
     return validation_mse
 
 
@@ -133,7 +136,9 @@ def test_model(gan, data, validation_mse, mc_forward_passes=1000):
                      alpha=0.2, edgecolor='#CC4F1B', facecolor='#FF9848', label='95%-PI')
     plt.legend()
     plt.show()
-    print('Forecast MSE:', mean_squared_error(data[gan.window_size:], forecast_mean[:, 0]))
+    print('Mean forecast MSE:', sliding_window_mse(forecast_mean, data[gan.window_size:], gan.forecasting_horizon).mean())
+    print('Forecast MSE:', sliding_window_mse(forecast_mean, data[gan.window_size:], gan.forecasting_horizon))
+    print('Mean validation MSE:', validation_mse.mean())
     print('Validation MSE:', validation_mse)
     print('Mean forecast standard deviation:', forecast_std.mean(axis=0))
     print('Mean total forecast standard deviation:', total_uncertainty.mean(axis=0))
@@ -148,17 +153,18 @@ def test_model(gan, data, validation_mse, mc_forward_passes=1000):
     print_coverage(mean=forecast_mean[:, 0], uncertainty=forecast_std[:, 0], actual_values=data[gan.window_size:])
     print_coverage(mean=forecast_mean[:, 0], uncertainty=total_uncertainty[:, 0], actual_values=data[gan.window_size:])
 
-    plot_results(forecast_mean.mean(axis=0), title='Mean Squared Forecast Error', y_label='MSE')
+    plot_results(forecast_mean.mean(axis=0), label='Forecast MSE', title='Mean Squared Forecast Error', y_label='MSE')
     plot_results(sliding_window_coverage(actual_values=data[gan.window_size:],
                                          upper_limits=np.quantile(forecast, q=0.9, axis=-1),
                                          lower_limits=np.quantile(forecast, q=0.1, axis=-1),
                                          forecast_horizon=gan.forecasting_horizon),
-                 title='80% Prediction Interval Coverage', y_label='Coverage')
-    plot_results(sliding_window_coverage(actual_values=data[gan.window_size:],
-                                         upper_limits=np.quantile(forecast, q=0.975, axis=-1),
-                                         lower_limits=np.quantile(forecast, q=0.025, axis=-1),
-                                         forecast_horizon=gan.forecasting_horizon),
-                 title='95% Prediction Interval Coverage', y_label='Coverage')
+                 label='80% PI coverage',
+                 y2=sliding_window_coverage(actual_values=data[gan.window_size:],
+                                            upper_limits=np.quantile(forecast, q=0.975, axis=-1),
+                                            lower_limits=np.quantile(forecast, q=0.025, axis=-1),
+                                            forecast_horizon=gan.forecasting_horizon),
+                 y2_label='95% PI coverage',
+                 title='Prediction Interval Coverage', y_label='Coverage')
 
 
 def pipeline():
@@ -166,7 +172,7 @@ def pipeline():
     gan = configure_model(model_name=cfg['gan']['model_name'])
     train, test = load_data(cfg=cfg['data'], window_size=gan.window_size)
     trained_gan, validation_mse = train_gan(gan=gan, data=train, epochs=10, batch_size=256, discriminator_epochs=1)
-    test_model(gan=trained_gan, data=test, validation_mse=validation_mse, mc_forward_passes=500)
+    test_model(gan=trained_gan, data=test, validation_mse=validation_mse, mc_forward_passes=5000)
 
 
 if __name__ == '__main__':

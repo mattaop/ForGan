@@ -1,4 +1,5 @@
 import numpy as np
+from sklearn.metrics import mean_squared_error
 
 
 def compute_coverage(upper_limits, lower_limits, actual_values):
@@ -11,12 +12,19 @@ def compute_coverage(upper_limits, lower_limits, actual_values):
 
 def sliding_window_coverage(upper_limits, lower_limits, actual_values, forecast_horizon):
     coverage = np.zeros(forecast_horizon)
-    print(upper_limits.shape)
-    print(actual_values.shape)
     for i in range(forecast_horizon):
         coverage[i] = compute_coverage(upper_limits[i:len(actual_values), i], lower_limits[i:len(actual_values), i],
                                        actual_values[i:, 0])
     return coverage
+
+
+def sliding_window_mse(forecast_mean, actual_values, forecast_horizon):
+    mean_mse = np.zeros(forecast_horizon)
+    print(forecast_mean.shape)
+    print(actual_values.shape)
+    for i in range(forecast_horizon):
+        mean_mse[i] = mean_squared_error(actual_values[i:, 0], forecast_mean[i:len(actual_values), i])
+    return mean_mse
 
 
 def print_coverage(mean, uncertainty, actual_values):
