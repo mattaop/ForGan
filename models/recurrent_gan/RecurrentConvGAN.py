@@ -26,6 +26,7 @@ class RecurrentConvGAN(GAN):
             self.output_size = 1
         else:
             self.output_size = self.forecasting_horizon
+
         self.noise_vector_size = 100  # Try larger vector
         self.mc_forward_passes = cfg['mc_forward_passes']
 
@@ -304,5 +305,5 @@ if __name__ == '__main__':
     gan.build_gan()
     gan.train(epochs=500, batch_size=512, discriminator_epochs=1)
     gan.monte_carlo_forecast(data=generate_noise(gan.window_size + gan.forecasting_horizon),
-                             steps=1, mc_forward_passes=5000, plot=True)
+                             steps=1, plot=True)
 
