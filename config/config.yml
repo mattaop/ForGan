@@ -8,7 +8,7 @@ gan:
   window_size: 24
   forecast_horizon: 12
   recurrent_forecasting: True # True, False
-  mc_forward_passes: 5000
+  mc_forward_passes: 50
   plot_rate: 25
 
 data:
