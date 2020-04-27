@@ -1,13 +1,13 @@
 gan:
   model_name: RecurrentConvGAN # GAN, ConvGAN, RecurrentGAN, RecurrentConvGAN
-  epochs: 4000
+  epochs: 1500
   batch_size: 256
-  wasserstein_loss: False # True, False
-  learning_rate: 0.0005
-  discriminator_epochs: 1
+  wasserstein_loss: True # True, False
+  learning_rate: 0.001
+  discriminator_epochs: 8
   window_size: 24
   forecast_horizon: 12
-  recurrent_forecasting: False # True, False
+  recurrent_forecasting: True # True, False
   mc_forward_passes: 5000
   plot_rate: 25
 

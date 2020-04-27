@@ -264,14 +264,13 @@ class RecurrentConvGAN(GAN):
         return forecast.mean(axis=1)
 
     def recurrent_forecast(self, time_series):
-        forecast = np.zeros(self.forecasting_horizon)
-        x_input = [x for x in time_series]
+        time_series = np.vstack([time_series] * self.mc_forward_passes)
+        x_input = np.zeros([self.mc_forward_passes, self.window_size + self.forecasting_horizon, 1])
+        x_input[:, :self.window_size] = time_series
         for i in range(self.forecasting_horizon):
-            generator_noise = self._generate_noise(1)
-            print(self.generator.predict([x_input[-self.forecasting_horizon:], generator_noise]).shaoe)
-            forecast[i] = self.generator.predict([x_input[-self.forecasting_horizon:], generator_noise])
-            x_input.append(forecast[i])
-        return forecast
+            generator_noise = self._generate_noise(batch_size=self.mc_forward_passes)
+            x_input[:, self.window_size+i] = self.generator.predict([x_input[:, i:self.window_size+i], generator_noise])
+        return x_input[:, -self.forecasting_horizon].transpose()
 
     def monte_carlo_forecast(self, data, steps=1, plot=False):
         time_series = np.expand_dims(data, axis=0)
@@ -281,9 +280,12 @@ class RecurrentConvGAN(GAN):
                 #generator_noise = self._generate_noise(batch_size=1)
                 #forecast[i, :, j] = self.generator.predict([time_series[:, i:self.window_size + i], generator_noise])[0]
                 #forecast[i, :, j] = self.recurrent_forecast(time_series[:, i:self.window_size + i])
-            generator_noise = self._generate_noise(batch_size=self.mc_forward_passes)
-            x_input = np.vstack([time_series[:, i:self.window_size + i]]*self.mc_forward_passes)
-            forecast[i, :, :] = self.generator.predict([x_input, generator_noise]).transpose()
+            if self.recurrent_forecasting:
+                forecast[i] = self.recurrent_forecast(time_series[:, i:self.window_size + i])
+            else:
+                generator_noise = self._generate_noise(batch_size=self.mc_forward_passes)
+                x_input = np.vstack([time_series[:, i:self.window_size + i]]*self.mc_forward_passes)
+                forecast[i] = self.generator.predict([x_input, generator_noise]).transpose()
         if plot:
             plt.figure()
             plt.plot(np.linspace(1, len(data[0]), len(data[0])), data[0], label='real data')
