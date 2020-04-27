@@ -25,17 +25,18 @@ def sliding_window_mse(forecast_mean, actual_values, forecast_horizon):
     return mse
 
 
-def symmetric_mean_absolute_percentage_error(y_true, y_pred):
-    y_true, y_pred = np.array(y_true), np.array(y_pred)
-    return np.abs((y_true - y_pred) / (np.abs(y_true)+np.abs(y_pred))) * 100
+def smape(y_true, y_pred):
+    denominator = (np.abs(y_true) + np.abs(y_pred))
+    diff = np.abs(y_true - y_pred) / denominator
+    diff[denominator == 0] = 0.0
+    return 2*100 * np.mean(diff)
 
 
 def sliding_window_smape(forecast_mean, actual_values, forecast_horizon):
-    smape = np.zeros(forecast_horizon)
+    f_smape = np.zeros(forecast_horizon)
     for i in range(forecast_horizon):
-        smape[i] = 2/(i+1)*symmetric_mean_absolute_percentage_error(actual_values[i:, 0],
-                                                                    forecast_mean[i:len(actual_values), i])
-    return smape
+        f_smape[i] = smape(actual_values[i:, 0], forecast_mean[i:len(actual_values), i])
+    return f_smape
 
 
 def print_coverage(mean, uncertainty, actual_values):
