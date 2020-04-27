@@ -85,7 +85,6 @@ class RNN:
         forecast = np.zeros([steps, self.forecasting_horizon, self.mc_forward_passes])
         func = K.function([self.model.layers[0].input, K.learning_phase()], [self.model.layers[-1].output])
         for i in tqdm(range(steps)):
-            # forecast[i, :, j] = self.recurrent_forecast(time_series[:, i:self.window_size + i])
             if self.recurrent_forecasting:
                 forecast[i] = self.recurrent_forecast(func, time_series[:, i:self.window_size + i])
             else:

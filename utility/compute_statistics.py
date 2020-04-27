@@ -21,7 +21,7 @@ def sliding_window_coverage(upper_limits, lower_limits, actual_values, forecast_
 def sliding_window_mse(forecast_mean, actual_values, forecast_horizon):
     mse = np.zeros(forecast_horizon)
     for i in range(forecast_horizon):
-        mse[i] = mean_squared_error(actual_values[i:, 0], forecast_mean[i:len(actual_values), i])
+        mse[i] = mean_squared_error(actual_values[i:, 0], forecast_mean[:len(actual_values)-i, i])
     return mse
 
 
@@ -35,7 +35,7 @@ def smape(y_true, y_pred):
 def sliding_window_smape(forecast_mean, actual_values, forecast_horizon):
     f_smape = np.zeros(forecast_horizon)
     for i in range(forecast_horizon):
-        f_smape[i] = smape(actual_values[i:, 0], forecast_mean[i:len(actual_values), i])
+        f_smape[i] = smape(actual_values[i:, 0], forecast_mean[:len(actual_values)-i, i])
     return f_smape
 
 
