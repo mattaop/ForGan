@@ -28,7 +28,7 @@ class RNN:
             self.output_size = self.forecasting_horizon
 
         self.mc_forward_passes = cfg['mc_forward_passes']
-        self.optimizer = Adam(lr=0.001)
+        self.optimizer = Adam(lr=cfg['learning_rate'])
         self.loss_function = 'mse'
 
         # Build and compile the discriminator
@@ -39,10 +39,8 @@ class RNN:
         inp = Input(shape=input_shape)
 
         x = SimpleRNN(64, return_sequences=False)(inp)
-        x = LeakyReLU(alpha=0.1)(x)
         x = Dropout(0.4)(x)
-        x = Dense(64)(x)
-        x = LeakyReLU(alpha=0.1)(x)
+        x = Dense(64, activation='relu')(x)
         x = Dropout(0.4)(x)
         output = Dense(self.output_size)(x)
 
@@ -87,7 +85,6 @@ class RNN:
         forecast = np.zeros([steps, self.forecasting_horizon, self.mc_forward_passes])
         func = K.function([self.model.layers[0].input, K.learning_phase()], [self.model.layers[-1].output])
         for i in tqdm(range(steps)):
-            # forecast[i, :, j] = self.recurrent_forecast(time_series[:, i:self.window_size + i])
             if self.recurrent_forecasting:
                 forecast[i] = self.recurrent_forecast(func, time_series[:, i:self.window_size + i])
             else:
