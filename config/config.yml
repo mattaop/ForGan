@@ -1,16 +1,16 @@
 gan:
   model_name: RNN # GAN, ConvGAN, RecurrentGAN, RecurrentConvGAN, RNN
-  epochs: 2
-  batch_size: 256
+  epochs: 1000
+  batch_size: 64
   wasserstein_loss: True # True, False
   learning_rate: 0.001
   discriminator_epochs: 8
   window_size: 24
   forecast_horizon: 12
   recurrent_forecasting: True # True, False
-  mc_forward_passes: 50
+  mc_forward_passes: 500
   plot_rate: 25
 
 data:
   data_source: Oslo # sine, oslo
-  test_split: 0.2
+  test_split: 0.25
