@@ -19,12 +19,23 @@ def sliding_window_coverage(upper_limits, lower_limits, actual_values, forecast_
 
 
 def sliding_window_mse(forecast_mean, actual_values, forecast_horizon):
-    mean_mse = np.zeros(forecast_horizon)
-    print(forecast_mean.shape)
-    print(actual_values.shape)
+    mse = np.zeros(forecast_horizon)
     for i in range(forecast_horizon):
-        mean_mse[i] = mean_squared_error(actual_values[i:, 0], forecast_mean[i:len(actual_values), i])
-    return mean_mse
+        mse[i] = mean_squared_error(actual_values[i:, 0], forecast_mean[i:len(actual_values), i])
+    return mse
+
+
+def symmetric_mean_absolute_percentage_error(y_true, y_pred):
+    y_true, y_pred = np.array(y_true), np.array(y_pred)
+    return np.abs((y_true - y_pred) / (np.abs(y_true)+np.abs(y_pred))) * 100
+
+
+def sliding_window_smape(forecast_mean, actual_values, forecast_horizon):
+    smape = np.zeros(forecast_horizon)
+    for i in range(forecast_horizon):
+        smape[i] = 2/(i+1)*symmetric_mean_absolute_percentage_error(actual_values[i:, 0],
+                                                                    forecast_mean[i:len(actual_values), i])
+    return smape
 
 
 def print_coverage(mean, uncertainty, actual_values):

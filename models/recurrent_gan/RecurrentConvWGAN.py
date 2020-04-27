@@ -15,7 +15,7 @@ class RecurrentConvWGAN(RecurrentConvGAN):
         self.plot_folder = 'RecurrentConvWGAN'
         self.noise_vector_size = 100  # Try larger vector
 
-        self.optimizer = RMSprop(lr=cfg['learning_rate'])
+        self.optimizer = Adam(lr=cfg['learning_rate'])
         self.loss_function = self.wasserstein_loss
 
     def wasserstein_loss(self, y_true, y_pred):

@@ -14,10 +14,11 @@ from data.generate_noise import generate_noise
 
 class GAN:
     def __init__(self, cfg):
-        self.plot_rate = 100
+        self.plot_rate = cfg['plot_rate']
         self.plot_folder = 'feed_forward_GAN'
         self.noise_vector_size = 10  # Try larger vector
         self.noise_type = 'normal'  # uniform
+        self.discriminator_epochs = cfg['discriminator_epochs']
 
         self.optimizer = Adam(lr=cfg['learning_rate'], beta_1=0.5)
         self.loss_function = 'binary_crossentropy'
@@ -32,7 +33,7 @@ class GAN:
         # The generator takes noise as input and generated imgs
         self.combined = None
 
-    def build_gan(self):
+    def build_model(self):
         # Build and compile the discriminator
         self.discriminator = self.build_discriminator()
         self.discriminator.compile(loss=self.loss_function, optimizer=self.optimizer, metrics=['accuracy'])
@@ -106,7 +107,7 @@ class GAN:
         else:
             return np.zeros((batch_size, 1))
 
-    def train(self, epochs, batch_size=128, data_samples=5000, discriminator_epochs=1):
+    def train(self, epochs, batch_size=128, data_samples=5000):
         # Set up directories
         paths = ['ims',
                  'ims/' + self.plot_folder
@@ -127,7 +128,7 @@ class GAN:
             # ---------------------
             #  Train Discriminator
             # ---------------------
-            for d_epochs in range(discriminator_epochs):
+            for d_epochs in range(self.discriminator_epochs):
                 # Select a random half batch of images
                 idx = np.random.randint(0, data.shape[0], half_batch)
                 real_samples = data[idx]

@@ -30,6 +30,8 @@ def get_gan(cfg):
     elif model_name.lower() == 'recurrentconvgan' and cfg['wasserstein_loss']:
         print('Model: RecurrentConvWGAN')
         model = RecurrentConvWGAN.RecurrentConvWGAN(cfg)
+    elif model_name.lower() == 'rnn':
+        model = RNN.RNN(cfg)
     else:
         ImportError('Model ' + model_name + 'not found')
         model = None
