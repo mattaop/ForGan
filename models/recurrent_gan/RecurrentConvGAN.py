@@ -28,12 +28,13 @@ class RecurrentConvGAN(GAN):
             self.output_size = self.forecasting_horizon
 
         self.noise_vector_size = 100  # Try larger vector
+        self.discriminator_epochs = cfg['discriminator_epochs']
         self.mc_forward_passes = cfg['mc_forward_passes']
 
         self.optimizer = Adam(cfg['learning_rate'], 0.5)
         self.loss_function = 'binary_crossentropy'
 
-    def build_gan(self):
+    def build_model(self):
         # Build and compile the discriminator
         self.discriminator = self.build_discriminator()
         self.discriminator.compile(loss=self.loss_function, optimizer=self.optimizer, metrics=['accuracy'])
@@ -119,7 +120,7 @@ class RecurrentConvGAN(GAN):
 
         return model
 
-    def train(self, epochs, batch_size=128, data_samples=5000, discriminator_epochs=1):
+    def train(self, epochs, batch_size=128, data_samples=5000):
         paths = ['ims',
                  'ims/' + self.plot_folder
                  ]
@@ -141,7 +142,7 @@ class RecurrentConvGAN(GAN):
             # ---------------------
             #  Train Discriminator
             # ---------------------
-            for d_epochs in range(discriminator_epochs):
+            for d_epochs in range(self.discriminator_epochs):
                 # Select a random half batch of images
                 idx = np.random.randint(0, x_train.shape[0], half_batch)
                 historic_time_series = x_train[idx]
@@ -194,7 +195,7 @@ class RecurrentConvGAN(GAN):
         plt.legend()
         plt.show()
 
-    def fit(self, x, y, epochs=1, batch_size=32, discriminator_epochs=1):
+    def fit(self, x, y, epochs=1, batch_size=32):
         half_batch = int(batch_size / 2)
         forecast_mse = np.zeros(epochs)
         G_loss = np.zeros(epochs)
@@ -205,13 +206,13 @@ class RecurrentConvGAN(GAN):
             # ---------------------
             #  Train Discriminator
             # ---------------------
-            for d_epochs in range(discriminator_epochs):
+            for d_epochs in range(max(1, self.discriminator_epochs)):
                 # Select a random half batch of images
                 idx = np.random.randint(0, x.shape[0], half_batch)
                 historic_time_series = x[idx]
                 future_time_series = y[idx]
 
-                generator_noise = self._generate_noise(half_batch)  # Normalisere til 1
+                generator_noise = self._generate_noise(half_batch)
 
                 # Generate a half batch of new images
                 gen_forecasts = self.generator.predict([historic_time_series, generator_noise])
@@ -270,7 +271,7 @@ class RecurrentConvGAN(GAN):
         for i in range(self.forecasting_horizon):
             generator_noise = self._generate_noise(batch_size=self.mc_forward_passes)
             x_input[:, self.window_size+i] = self.generator.predict([x_input[:, i:self.window_size+i], generator_noise])
-        return x_input[:, -self.forecasting_horizon].transpose()
+        return x_input[:, -self.forecasting_horizon:].transpose()[0]
 
     def monte_carlo_forecast(self, data, steps=1, plot=False):
         time_series = np.expand_dims(data, axis=0)
@@ -288,9 +289,9 @@ class RecurrentConvGAN(GAN):
                 forecast[i] = self.generator.predict([x_input, generator_noise]).transpose()
         if plot:
             plt.figure()
-            plt.plot(np.linspace(1, len(data[0]), len(data[0])), data[0], label='real data')
+            plt.plot(np.linspace(1, len(data[0]), len(data[0])), data[0], label='Real data')
             plt.plot(np.linspace(self.window_size, self.window_size + steps, steps), forecast.mean(axis=2)[:, 0],
-                     label='forecasted data')
+                     label='Forecasted data')
             plt.legend()
             plt.show()
             print('Forecast error:',

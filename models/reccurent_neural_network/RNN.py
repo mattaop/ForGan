@@ -16,9 +16,18 @@ from utility.split_data import split_sequence
 
 
 class RNN:
-    def __init__(self):
-        self.window_size = 24
-        self.forecasting_horizon = 1
+    def __init__(self, cfg):
+        self.plot_rate = cfg['plot_rate']
+        self.plot_folder = 'RNN'
+        self.window_size = cfg['window_size']
+        self.forecasting_horizon = cfg['forecast_horizon']
+        self.recurrent_forecasting = cfg['recurrent_forecasting']
+        if self.recurrent_forecasting:
+            self.output_size = 1
+        else:
+            self.output_size = self.forecasting_horizon
+
+        self.mc_forward_passes = cfg['mc_forward_passes']
         self.optimizer = Adam(lr=0.001)
         self.loss_function = 'mse'
 
@@ -35,7 +44,7 @@ class RNN:
         x = Dense(64)(x)
         x = LeakyReLU(alpha=0.1)(x)
         x = Dropout(0.4)(x)
-        output = Dense(self.forecasting_horizon)(x)
+        output = Dense(self.output_size)(x)
 
         model = Model(inputs=inp, outputs=output)
         model.compile(optimizer=self.optimizer, loss=self.loss_function)
@@ -55,28 +64,35 @@ class RNN:
         plt.legend()
         plt.show()
 
+        return {'mse': history.history['loss'], 'G_loss': None, 'D_loss': None, 'Accuracy': None}
+
+    def fit(self, x, y, epochs=1, batch_size=32):
+        # Load the data
+        history = self.model.fit(x, y[:, :, 0], epochs=epochs, batch_size=batch_size, validation_split=0.1,
+                                 verbose=2)
+
     def forecast(self, data):
         return self.model.predict(data)
 
-    def monte_carlo_forecast(self, data, steps=1, mc_forward_passes=500, plot=False):
+    def recurrent_forecast(self, func, time_series):
+        time_series = np.vstack([time_series] * self.mc_forward_passes)
+        x_input = np.zeros([self.mc_forward_passes, self.window_size + self.forecasting_horizon, 1])
+        x_input[:, :self.window_size] = time_series
+        for i in range(self.forecasting_horizon):
+            x_input[:, self.window_size+i] = np.array(func([x_input[:, i:self.window_size+i], 0.4])[0])
+        return x_input[:, -self.forecasting_horizon:].transpose()[0]
+
+    def monte_carlo_forecast(self, data, steps=1):
         time_series = np.expand_dims(data, axis=0)
-        forecast = np.zeros([steps, self.forecasting_horizon, mc_forward_passes])
+        forecast = np.zeros([steps, self.forecasting_horizon, self.mc_forward_passes])
         func = K.function([self.model.layers[0].input, K.learning_phase()], [self.model.layers[-1].output])
         for i in tqdm(range(steps)):
-            x_input = np.vstack([time_series[:, i:self.window_size + i]]*mc_forward_passes)
-            forecast[i] = func([x_input, 0.4])
-            #for j in range(mc_forward_passes):
-             #   forecast[i, :, j] = func([time_series[:, i:self.window_size + i], 0.4])[0]
-        if plot:
-            plt.figure()
-            plt.plot(np.linspace(1, len(data[0]), len(data[0])), data[0], label='real data')
-            plt.plot(np.linspace(self.window_size, self.window_size + steps, steps), forecast.mean(axis=2)[:, 0],
-                     label='forecasted data')
-            plt.legend()
-            plt.show()
-
-        print('Forecast error:', mean_squared_error(time_series[0, -len(forecast):], forecast.mean(axis=2)[:, 0]))
-        print('Forecast standard deviation', np.mean(forecast.std(axis=2)[:, 0], axis=0))
+            # forecast[i, :, j] = self.recurrent_forecast(time_series[:, i:self.window_size + i])
+            if self.recurrent_forecasting:
+                forecast[i] = self.recurrent_forecast(func, time_series[:, i:self.window_size + i])
+            else:
+                x_input = np.vstack([time_series[:, i:self.window_size + i]]*self.mc_forward_passes)
+                forecast[i] = np.array(func([x_input, 0.4])[0]).transpose()
         return forecast
 
 

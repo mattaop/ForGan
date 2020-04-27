@@ -29,7 +29,7 @@ from config.load_config import load_config_file
 from models.get_model import get_model
 from utility.split_data import split_sequence
 from data.generate_sine import generate_sine_data
-from utility.compute_coverage import print_coverage
+from utility.compute_statistics import print_coverage
 
 
 def configure_model(model_name):
