@@ -13,7 +13,7 @@ class RecurrentConvWGAN(RecurrentConvGAN):
     def __init__(self, cfg):
         RecurrentConvGAN.__init__(self, cfg)
         self.plot_folder = 'RecurrentConvWGAN'
-        self.noise_vector_size = 100  # Try larger vector
+        self.noise_vector_size = 50  # Try larger vector
 
         self.optimizer = RMSprop(lr=cfg['learning_rate'])
         self.loss_function = self.wasserstein_loss

@@ -141,7 +141,7 @@ def test_model(gan, data, validation_mse):
                      alpha=0.2, edgecolor='#CC4F1B', facecolor='#FF9848', label='95%-PI')
     plt.legend()
     plt.show()
-    print('Mean validaiton MSE:', validation_mse)
+    print('Mean validation MSE:', validation_mse.mean())
     print('Mean forecast MSE:', sliding_window_mse(forecast_mean, data[gan.window_size:], gan.forecasting_horizon).mean())
     print('Forecast MSE:', sliding_window_mse(forecast_mean, data[gan.window_size:], gan.forecasting_horizon))
     print('Mean forecast SMAPE:', sliding_window_smape(forecast_mean, data[gan.window_size:], gan.forecasting_horizon).mean())
@@ -192,6 +192,7 @@ def test_model(gan, data, validation_mse):
                                   upper_limits=forecast_mean + 1.96 * total_uncertainty,
                                   lower_limits=forecast_mean - 1.96 * total_uncertainty,
                                   forecast_horizon=gan.forecasting_horizon))
+
 
     plot_results(sliding_window_mse(forecast_mean, data[gan.window_size:], gan.forecasting_horizon),
                  label='Forecast MSE', title='Mean Squared Forecast Error', y_label='MSE')
