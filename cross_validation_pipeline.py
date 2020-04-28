@@ -1,4 +1,5 @@
 import os
+
 os.environ['PYTHONHASHSEED'] = '0'
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
@@ -8,6 +9,7 @@ os.environ['TF_DETERMINISTIC_OPS'] = '1'
 import numpy as np
 import random as rn
 import tensorflow as tf
+
 print(tf.__version__)
 seed = 1
 rn.seed(seed)
@@ -15,6 +17,7 @@ np.random.seed(seed)
 tf.set_random_seed(seed)
 
 from keras import backend as k
+
 config = tf.ConfigProto(intra_op_parallelism_threads=1, inter_op_parallelism_threads=1,
                         allow_soft_placement=True, device_count={'CPU': 1})
 sess = tf.Session(graph=tf.get_default_graph(), config=config)
@@ -54,8 +57,8 @@ def load_data(cfg, window_size):
     else:
         return None
     print('Data shape', data.shape)
-    train = data[:-int(len(data)*cfg['test_split'])]
-    test = data[-int(len(data)*cfg['test_split']+window_size):]
+    train = data[:-int(len(data) * cfg['test_split'])]
+    test = data[-int(len(data) * cfg['test_split'] + window_size):]
     train, test = scale_data(train, test)
     return train, test
 
@@ -95,7 +98,7 @@ def compute_validation_error(gan, data):
 
 def train_gan(gan, data, epochs, batch_size=128):
     # Split data in training and validation set
-    train, val = data[:-int(len(data)*0.1)], data[-int(gan.window_size+len(data)*0.1):]
+    train, val = data[:-int(len(data) * 0.1)], data[-int(gan.window_size + len(data) * 0.1):]
 
     # Split training data into (x_t-l, ..., x_t), (x_t+1) pairs
     x_train, y_train = split_sequence(train, gan.window_size, gan.output_size)
@@ -110,7 +113,7 @@ def train_gan(gan, data, epochs, batch_size=128):
     plt.plot(np.linspace(1, epochs, epochs), history['mse'], label='Forecast MSE generator')
     plt.legend()
     # plt.show()
-    
+
     plt.figure()
     plt.title('Training Generator and Discriminator Loss')
     plt.plot(np.linspace(1, epochs, epochs), history['G_loss'], label='Generator loss')
@@ -123,7 +126,8 @@ def train_gan(gan, data, epochs, batch_size=128):
 
 
 def test_model(gan, data, validation_mse):
-    forecast = gan.monte_carlo_forecast(data, steps=int(len(data)-gan.window_size))  # steps x horizon x mc_forward_passes
+    forecast = gan.monte_carlo_forecast(data,
+                                        steps=int(len(data) - gan.window_size))  # steps x horizon x mc_forward_passes
     forecast_mean = forecast.mean(axis=-1)
     forecast_std = forecast.std(axis=-1)
     forecast_var = forecast.var(axis=-1)
@@ -131,20 +135,24 @@ def test_model(gan, data, validation_mse):
     print('Mutual information:', normalized_mutual_info_score(forecast_mean[:, 0], data[gan.window_size:, 0]))
     total_uncertainty = np.sqrt(forecast_var + validation_mse)
 
-    x_pred = np.linspace(gan.window_size+1, len(data), len(data)-gan.window_size)
+    x_pred = np.linspace(gan.window_size + 1, len(data), len(data) - gan.window_size)
     plt.figure()
     plt.plot(np.linspace(1, len(data), len(data)), data, label='Data')
     plt.plot(x_pred, forecast_mean[:, 0], label='Predictions')
-    plt.fill_between(x_pred, forecast_mean[:, 0]-1.28*forecast_std[:, 0], forecast_mean[:, 0]+1.28*forecast_std[:, 0],
+    plt.fill_between(x_pred, forecast_mean[:, 0] - 1.28 * forecast_std[:, 0],
+                     forecast_mean[:, 0] + 1.28 * forecast_std[:, 0],
                      alpha=0.5, edgecolor='#CC4F1B', facecolor='#FF9848', label='80%-PI')
-    plt.fill_between(x_pred, forecast_mean[:, 0]-1.96*forecast_std[:, 0], forecast_mean[:, 0]+1.96*forecast_std[:, 0],
+    plt.fill_between(x_pred, forecast_mean[:, 0] - 1.96 * forecast_std[:, 0],
+                     forecast_mean[:, 0] + 1.96 * forecast_std[:, 0],
                      alpha=0.2, edgecolor='#CC4F1B', facecolor='#FF9848', label='95%-PI')
     plt.legend()
     plt.show()
     print('Mean validaiton MSE:', validation_mse)
-    print('Mean forecast MSE:', sliding_window_mse(forecast_mean, data[gan.window_size:], gan.forecasting_horizon).mean())
+    print('Mean forecast MSE:',
+          sliding_window_mse(forecast_mean, data[gan.window_size:], gan.forecasting_horizon).mean())
     print('Forecast MSE:', sliding_window_mse(forecast_mean, data[gan.window_size:], gan.forecasting_horizon))
-    print('Mean forecast SMAPE:', sliding_window_smape(forecast_mean, data[gan.window_size:], gan.forecasting_horizon).mean())
+    print('Mean forecast SMAPE:',
+          sliding_window_smape(forecast_mean, data[gan.window_size:], gan.forecasting_horizon).mean())
     print('Forecast SMAPE:', sliding_window_smape(forecast_mean, data[gan.window_size:], gan.forecasting_horizon))
 
     # print('Mean validation MSE:', validation_mse.mean())
@@ -174,8 +182,8 @@ def test_model(gan, data, validation_mse):
 
     print('80%-prediction interval coverage - Mean:',
           sliding_window_coverage(actual_values=data[gan.window_size:],
-                                  upper_limits=forecast_mean + 1.28*total_uncertainty,
-                                  lower_limits=forecast_mean - 1.28*total_uncertainty,
+                                  upper_limits=forecast_mean + 1.28 * total_uncertainty,
+                                  lower_limits=forecast_mean - 1.28 * total_uncertainty,
                                   forecast_horizon=gan.forecasting_horizon).mean(),
           '\n Forecast horizon:',
           sliding_window_coverage(actual_values=data[gan.window_size:],

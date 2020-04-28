@@ -72,14 +72,14 @@ class RecurrentConvGAN(GAN):
         noise_inp = Input(shape=noise_shape)
         historic_inp = Input(shape=historic_shape)
 
-        hist = LSTM(64, return_sequences=True)(historic_inp)
-        hist = LSTM(64, return_sequences=False)(hist)
+        hist = SimpleRNN(64, return_sequences=False)(historic_inp)
+        # hist = LSTM(64, return_sequences=False)(hist)
 
         # hist = ReLU()(hist)
 
         x = Concatenate(axis=1)([hist, noise_inp])
         # x = BatchNormalization()(x)
-        x = Dense(32)(x)
+        x = Dense(64)(x)
         x = ReLU()(x)
         prediction = Dense(self.output_size)(x)
 
@@ -99,16 +99,16 @@ class RecurrentConvGAN(GAN):
         # define the constraint
         const = ClipConstraint(0.1)
 
-        x = Conv1D(32, kernel_size=4, kernel_constraint=const)(x)
+        x = Conv1D(64, kernel_size=4, kernel_constraint=const)(x)
         x = LeakyReLU(alpha=0.1)(x)
-        x = BatchNormalization()(x)
+        # x = BatchNormalization()(x)
         # x = Dropout(0.2)(x)
         x = MaxPooling1D(pool_size=2)(x)
-        x = Conv1D(32, kernel_size=4, kernel_constraint=const)(x)
-        x = LeakyReLU(alpha=0.1)(x)
-        x = BatchNormalization()(x)
+        # x = Conv1D(64, kernel_size=4, kernel_constraint=const)(x)
+        # x = LeakyReLU(alpha=0.1)(x)
+        # x = BatchNormalization()(x)
         # x = Dropout(0.2)(x)
-        x = MaxPooling1D(pool_size=2)(x)
+        # x = MaxPooling1D(pool_size=2)(x)
         x = Flatten()(x)
         # x = LeakyReLU(alpha=0.2)(x)
         x = Dense(64)(x)
@@ -262,6 +262,13 @@ class RecurrentConvGAN(GAN):
             generator_noise = self._generate_noise(batch_size=self.mc_forward_passes)
             x_input = np.vstack([np.expand_dims(x[i], axis=0)] * self.mc_forward_passes)
             forecast[i] = self.generator.predict([x_input, generator_noise])
+        """
+        forecast = np.zeros([x.shape[0]*self.mc_forward_passes, self.forecasting_horizon])
+        generator_noise = self._generate_noise(batch_size=self.mc_forward_passes*x.shape[0])
+        x_input = np.vstack([np.expand_dims(x, axis=0)] * self.mc_forward_passes)
+        forecast = self.generator.predict([x_input.reshape([x_input.shape[0]*x_input.shape[1], x_input.shape[2], x_input.shape[3]]), generator_noise])
+        forecast = forecast.reshape([x.shape[0], self.mc_forward_passes, self.output_size])
+        """
         return forecast.mean(axis=1)
 
     def recurrent_forecast(self, time_series):

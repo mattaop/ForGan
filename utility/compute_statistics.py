@@ -13,7 +13,7 @@ def compute_coverage(upper_limits, lower_limits, actual_values):
 def sliding_window_coverage(upper_limits, lower_limits, actual_values, forecast_horizon):
     coverage = np.zeros(forecast_horizon)
     for i in range(forecast_horizon):
-        coverage[i] = compute_coverage(upper_limits[i:len(actual_values), i], lower_limits[i:len(actual_values), i],
+        coverage[i] = compute_coverage(upper_limits[:len(actual_values)-i, i], lower_limits[:len(actual_values)-i, i],
                                        actual_values[i:, 0])
     return coverage
 
