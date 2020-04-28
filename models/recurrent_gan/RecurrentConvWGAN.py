@@ -13,9 +13,9 @@ class RecurrentConvWGAN(RecurrentConvGAN):
     def __init__(self, cfg):
         RecurrentConvGAN.__init__(self, cfg)
         self.plot_folder = 'RecurrentConvWGAN'
-        self.noise_vector_size = 100  # Try larger vector
+        self.noise_vector_size = 50  # Try larger vector
 
-        self.optimizer = Adam(lr=cfg['learning_rate'])
+        self.optimizer = RMSprop(lr=cfg['learning_rate'])
         self.loss_function = self.wasserstein_loss
 
     def wasserstein_loss(self, y_true, y_pred):
@@ -29,13 +29,13 @@ class RecurrentConvWGAN(RecurrentConvGAN):
         noise_inp = Input(shape=noise_shape)
         historic_inp = Input(shape=historic_shape)
 
-        hist = SimpleRNN(32, return_sequences=False)(historic_inp)
+        hist = SimpleRNN(64, return_sequences=False)(historic_inp)
         # hist = ReLU()(hist)
 
         x = Concatenate(axis=1)([hist, noise_inp])
         # x = Dropout(0.2)(x)
         # x = BatchNormalization()(x)
-        x = Dense(32)(x)
+        x = Dense(64)(x)
         # x = Dropout(0.4)(x)
         x = ReLU()(x)
         prediction = Dense(self.output_size)(x)
@@ -57,7 +57,7 @@ class RecurrentConvWGAN(RecurrentConvGAN):
         # define the constraint
         const = ClipConstraint(0.1)
 
-        x = Conv1D(32, kernel_size=4, kernel_constraint=const)(x)
+        x = Conv1D(64, kernel_size=4, kernel_constraint=const)(x)
         x = LeakyReLU(alpha=0.1)(x)
         # x = BatchNormalization()(x)
         # x = Dropout(0.2)(x)

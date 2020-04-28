@@ -128,28 +128,10 @@ def test_model(gan, data, validation_mse):
     forecast_std = forecast.std(axis=-1)
     forecast_var = forecast.var(axis=-1)
 
+    print(forecast_var.shape)
+    print(validation_mse)
     total_uncertainty = np.sqrt(forecast_var + validation_mse)
-    for i in range(gan.forecasting_horizon):
-        x_pred = np.linspace(gan.window_size+i, len(data)+i, len(data)-gan.window_size)
-        plt.figure()
-        plt.plot(np.linspace(1, len(data), len(data)), data, label='Data')
-        plt.plot(x_pred, forecast_mean[:, i], label='Predictions')
-        plt.fill_between(x_pred, forecast_mean[:, i]-1.28*forecast_std[:, i], forecast_mean[:, i]+1.28*forecast_std[:, i],
-                         alpha=0.5, edgecolor='#CC4F1B', facecolor='#FF9848', label='80%-PI')
-        plt.fill_between(x_pred, forecast_mean[:, i]-1.96*forecast_std[:, i], forecast_mean[:, i]+1.96*forecast_std[:, i],
-                         alpha=0.2, edgecolor='#CC4F1B', facecolor='#FF9848', label='95%-PI')
-        plt.legend()
-        plt.show()
 
-        x_pred = np.linspace(1, len(data[gan.window_size+i:]), len(data[gan.window_size+i:]))
-        plt.figure()
-        plt.plot(x_pred, data[gan.window_size+i:, 0], label='Data')
-        plt.plot(x_pred, forecast_mean[:len(data) - gan.window_size-i, i], label='Predictions')
-        plt.legend()
-        plt.show()
-        print(data[gan.window_size+i:, 0].shape)
-        print(forecast_mean[:len(data) - gan.window_size-i, i].shape)
-        print('Mean forecast MSE:', i, mean_squared_error(data[gan.window_size+i:, 0], forecast_mean[:len(data) - gan.window_size-i, i]))
     print('Mean forecast MSE:', sliding_window_mse(forecast_mean, data[gan.window_size:], gan.forecasting_horizon).mean())
     print('Forecast MSE:', sliding_window_mse(forecast_mean, data[gan.window_size:], gan.forecasting_horizon))
     print('Mean forecast SMAPE:', sliding_window_smape(forecast_mean, data[gan.window_size:], gan.forecasting_horizon).mean())
@@ -163,7 +145,7 @@ def test_model(gan, data, validation_mse):
                                                                               upper_limits=np.quantile(forecast, q=0.9, axis=-1),
                                                                               lower_limits=np.quantile(forecast, q=0.1, axis=-1),
                                                                               forecast_horizon=gan.forecasting_horizon).mean(),
-          '/n Forecast horizon:', sliding_window_coverage(actual_values=data[gan.window_size:],
+          '\n Forecast horizon:', sliding_window_coverage(actual_values=data[gan.window_size:],
                                                           upper_limits=np.quantile(forecast, q=0.9, axis=-1),
                                                           lower_limits=np.quantile(forecast, q=0.1, axis=-1),
                                                           forecast_horizon=gan.forecasting_horizon))
@@ -171,7 +153,7 @@ def test_model(gan, data, validation_mse):
                                                                               upper_limits=np.quantile(forecast, q=0.975, axis=-1),
                                                                               lower_limits=np.quantile(forecast, q=0.025, axis=-1),
                                                                               forecast_horizon=gan.forecasting_horizon).mean(),
-          '/n Forecast horizon:', sliding_window_coverage(actual_values=data[gan.window_size:],
+          '\n Forecast horizon:', sliding_window_coverage(actual_values=data[gan.window_size:],
                                                           upper_limits=np.quantile(forecast, q=0.975, axis=-1),
                                                           lower_limits=np.quantile(forecast, q=0.025, axis=-1),
                                                           forecast_horizon=gan.forecasting_horizon))
