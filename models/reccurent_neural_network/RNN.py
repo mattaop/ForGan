@@ -64,10 +64,11 @@ class RNN:
 
         return {'mse': history.history['loss'], 'G_loss': None, 'D_loss': None, 'Accuracy': None}
 
-    def fit(self, x, y, epochs=1, batch_size=32):
+    def fit(self, x, y, epochs=1, batch_size=32, verbose=2):
         # Load the data
         history = self.model.fit(x, y[:, :, 0], epochs=epochs, batch_size=batch_size, validation_split=0.1,
-                                 verbose=2)
+                                 verbose=verbose)
+        return history
 
     def forecast(self, data):
         return self.model.predict(data)

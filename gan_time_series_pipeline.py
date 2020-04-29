@@ -9,7 +9,7 @@ import numpy as np
 import random as rn
 import tensorflow as tf
 print(tf.__version__)
-seed = 1
+seed = 4
 rn.seed(seed)
 np.random.seed(seed)
 tf.set_random_seed(seed)
@@ -192,7 +192,6 @@ def test_model(gan, data, validation_mse):
                                   upper_limits=forecast_mean + 1.96 * total_uncertainty,
                                   lower_limits=forecast_mean - 1.96 * total_uncertainty,
                                   forecast_horizon=gan.forecasting_horizon))
-
 
     plot_results(sliding_window_mse(forecast_mean, data[gan.window_size:], gan.forecasting_horizon),
                  label='Forecast MSE', title='Mean Squared Forecast Error', y_label='MSE')
