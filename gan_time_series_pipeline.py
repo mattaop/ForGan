@@ -9,7 +9,7 @@ import numpy as np
 import random as rn
 import tensorflow as tf
 print(tf.__version__)
-seed = 1
+seed = 4
 rn.seed(seed)
 np.random.seed(seed)
 tf.set_random_seed(seed)

@@ -27,7 +27,7 @@ class RecurrentConvGAN(GAN):
         else:
             self.output_size = self.forecasting_horizon
 
-        self.noise_vector_size = 100  # Try larger vector
+        self.noise_vector_size = cfg['noise_vector_size']   # Try larger vector
         self.discriminator_epochs = cfg['discriminator_epochs']
         self.mc_forward_passes = cfg['mc_forward_passes']
 
@@ -195,7 +195,7 @@ class RecurrentConvGAN(GAN):
         plt.legend()
         plt.show()
 
-    def fit(self, x, y, epochs=1, batch_size=32):
+    def fit(self, x, y, epochs=1, batch_size=32, verbose=1):
         half_batch = int(batch_size / 2)
         forecast_mse = np.zeros(epochs)
         G_loss = np.zeros(epochs)
@@ -247,8 +247,9 @@ class RecurrentConvGAN(GAN):
             G_loss[epoch] = g_loss
             D_loss[epoch] = d_loss[0]
             # Plot the progress
-            print("%d [D loss: %f, acc.: %.2f%%] [G loss: %f, forecast mse: %f]" %
-                  (epoch, d_loss[0], 100 * d_loss[1], g_loss, forecast_mse[epoch]))
+            if verbose == 1:
+                print("%d [D loss: %f, acc.: %.2f%%] [G loss: %f, forecast mse: %f]" %
+                      (epoch, d_loss[0], 100 * d_loss[1], g_loss, forecast_mse[epoch]))
             # print("KL-divergence: ", kl_divergence[epoch])
 
             if epoch % self.plot_rate == 0:
@@ -257,7 +258,7 @@ class RecurrentConvGAN(GAN):
         return {'mse': forecast_mse, 'G_loss': G_loss, 'D_loss': D_loss, 'Accuracy': 100 * d_loss[1]}
 
     def forecast(self, x):
-        forecast = np.zeros([x.shape[0], self.mc_forward_passes, self.forecasting_horizon])
+        forecast = np.zeros([x.shape[0], self.mc_forward_passes, self.output_size])
         for i in tqdm(range(x.shape[0])):
             generator_noise = self._generate_noise(batch_size=self.mc_forward_passes)
             x_input = np.vstack([np.expand_dims(x[i], axis=0)] * self.mc_forward_passes)

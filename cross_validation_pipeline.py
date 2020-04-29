@@ -96,33 +96,34 @@ def compute_validation_error(gan, data):
     return validation_mse
 
 
-def train_gan(gan, data, epochs, batch_size=128):
+def train_cross_validation_gan(gan, data, cfg, epochs, batch_size=128):
     # Split data in training and validation set
     train, val = data[:-int(len(data) * 0.1)], data[-int(gan.window_size + len(data) * 0.1):]
-
-    # Split training data into (x_t-l, ..., x_t), (x_t+1) pairs
     x_train, y_train = split_sequence(train, gan.window_size, gan.output_size)
+    x_val, y_val = split_sequence(val, gan.window_size, gan.output_size)
+    validation_forecasts = np.zeros([cfg['cross_validation_setup']['k-folds'], x_val.shape[0], gan.output_size])
+    validation_mse = np.zeros([cfg['cross_validation_setup']['k-folds'], gan.output_size])
+    for i in range(cfg['cross_validation_setup']['k-folds']):
+        cross_val_gan = configure_model(cfg=cfg['gan'])
+        idx = np.random.randint(0, x_train.shape[0], int(x_train.shape[0]))
+        x_fold = x_train[idx]
+        y_fold = y_train[idx]
+        cross_val_gan.fit(x_fold, y_fold, epochs=epochs, batch_size=batch_size, verbose=0)
+        # validation_mse = compute_validation_error(gan, val)
+        validation_forecasts[i] = cross_val_gan.forecast(x_val)
+        print(y_val.shape)
+        for j in range(gan.output_size):
+            validation_mse[i, j] = mean_squared_error(y_val[:, j], validation_forecasts[i, :, j])
+    print(validation_forecasts.shape)
+    gan.fit(x_train, y_train, epochs=epochs, batch_size=batch_size)
+    training_variance = validation_forecasts.var(axis=0).mean(axis=0)
+    inherent_noise = validation_mse.mean(axis=0) - training_variance
 
-    history = gan.fit(x_train, y_train, epochs=epochs, batch_size=batch_size)
+    print('Validation_mse:', validation_mse.mean(axis=0))
+    print('Training variance:', training_variance)
+    print('Inherent noise estimate:', inherent_noise)
 
-    validation_mse = compute_validation_error(gan, val)
-
-    """
-    plt.figure()
-    plt.title('Training Mean Squared Error')
-    plt.plot(np.linspace(1, epochs, epochs), history['mse'], label='Forecast MSE generator')
-    plt.legend()
-    # plt.show()
-
-    plt.figure()
-    plt.title('Training Generator and Discriminator Loss')
-    plt.plot(np.linspace(1, epochs, epochs), history['G_loss'], label='Generator loss')
-    plt.plot(np.linspace(1, epochs, epochs), history['D_loss'], label='Discriminator loss')
-    plt.legend()
-    # plt.show()
-    """
-
-    return gan, validation_mse
+    return gan, inherent_noise
 
 
 def test_model(gan, data, validation_mse):
@@ -157,8 +158,9 @@ def test_model(gan, data, validation_mse):
 
     # print('Mean validation MSE:', validation_mse.mean())
     # print('Validation MSE:', validation_mse)
-    # print('Mean forecast standard deviation:', forecast_std.mean(axis=0))
-    # print('Mean total forecast standard deviation:', total_uncertainty.mean(axis=0))
+    print('Mean forecast standard deviation:', forecast_std.mean(axis=0))
+    print('Mean total forecast standard deviation:', total_uncertainty.mean(axis=0).mean())
+    print('Forecast standard deviation:', total_uncertainty.mean(axis=0))
     print('80%-prediction interval coverage - Mean:',
           sliding_window_coverage(actual_values=data[gan.window_size:],
                                   upper_limits=np.quantile(forecast, q=0.9, axis=-1),
@@ -220,8 +222,8 @@ def pipeline():
     cfg = load_config_file('config\\config.yml')
     gan = configure_model(cfg=cfg['gan'])
     train, test = load_data(cfg=cfg['data'], window_size=gan.window_size)
-    trained_gan, validation_mse = train_gan(gan=gan, data=train, epochs=cfg['gan']['epochs'],
-                                            batch_size=cfg['gan']['batch_size'])
+    trained_gan, validation_mse = train_cross_validation_gan(gan=gan, data=train, cfg=cfg, epochs=cfg['gan']['epochs'],
+                                                             batch_size=cfg['gan']['batch_size'])
     test_model(gan=trained_gan, data=test, validation_mse=validation_mse)
 
 

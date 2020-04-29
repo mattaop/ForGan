@@ -3,4 +3,4 @@ __pycache__/
 old_files/
 ims/
 venv/
-config\paths.yml
+config/paths.yml
