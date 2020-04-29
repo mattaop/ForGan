@@ -193,7 +193,6 @@ def test_model(gan, data, validation_mse):
                                   lower_limits=forecast_mean - 1.96 * total_uncertainty,
                                   forecast_horizon=gan.forecasting_horizon))
 
-
     plot_results(sliding_window_mse(forecast_mean, data[gan.window_size:], gan.forecasting_horizon),
                  label='Forecast MSE', title='Mean Squared Forecast Error', y_label='MSE')
     plot_results(sliding_window_coverage(actual_values=data[gan.window_size:],

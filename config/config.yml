@@ -3,8 +3,8 @@ gan:
   epochs: 1500
   batch_size: 256
   wasserstein_loss: True # True, False
-  learning_rate: 0.01
-  discriminator_epochs: 10
+  learning_rate: 0.001
+  discriminator_epochs: 16
 
   window_size: 24
   forecast_horizon: 12
