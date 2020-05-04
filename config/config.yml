@@ -5,12 +5,12 @@ gan:
   wasserstein_loss: True # True, False
   learning_rate: 0.0005
   discriminator_epochs: 3
-  noise_vector_size: 10
+  noise_vector_size: 50
 
   window_size: 24
   forecast_horizon: 12
   recurrent_forecasting: True # True, False
-  mc_forward_passes: 500
+  mc_forward_passes: 1000
   plot_rate: 25
 
 data:
