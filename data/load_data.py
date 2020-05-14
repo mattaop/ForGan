@@ -38,7 +38,7 @@ def load_australia_temperature():
 
 
 def load_electricity():
-    data_array = np.load('electricity.npy')
+    data_array = np.load('data_files/electricity.npy')
     print(data_array.shape)
     return data_array
 
