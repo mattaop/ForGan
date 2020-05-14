@@ -32,7 +32,7 @@ from config.load_config import load_config_file
 from models.get_model import get_gan
 from utility.split_data import split_sequence
 from data.generate_sine import generate_sine_data
-from data.load_data import load_oslo_temperature
+from data.load_data import load_oslo_temperature, load_australia_temperature
 from utility.compute_statistics import *
 
 
@@ -54,6 +54,8 @@ def load_data(cfg, window_size):
         data = generate_sine_data(num_points=1000)
     elif cfg['data_source'].lower() == 'oslo':
         data = load_oslo_temperature()
+    elif cfg['data_source'].lower() == 'australia':
+        data = load_australia_temperature()
     else:
         return None
     print('Data shape', data.shape)

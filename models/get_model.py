@@ -1,6 +1,6 @@
 from models.feed_forward_gan import GAN, WGAN
 from models.conv_gan import ConvGAN, ConvWGAN
-from models.recurrent_gan import RecurrentGAN, RecurrentWGAN, RecurrentConvGAN, RecurrentConvWGAN
+from models.recurrent_gan import RecurrentGAN, RecurrentWGAN, RecurrentConvGAN, RecurrentConvWGAN, RecurrentConvDSGAN
 from models.baseline_models import RNN
 from models.hybrid_gan import ESWGAN, ESRNNWGAN
 
@@ -37,6 +37,9 @@ def get_gan(cfg):
     elif model_name.lower() == 'esrnngan' and cfg['wasserstein_loss']:
         print('Model: ES RNN GAN')
         model = ESRNNWGAN.ESRNNWGAN(cfg)
+    elif model_name.lower() == 'recurrentconvdsgan':
+        print('Model: RecurrentConvDSGAN')
+        model = RecurrentConvDSGAN.RecurrentConvDSGAN(cfg)
     elif model_name.lower() == 'rnn':
         model = RNN.RNN(cfg)
     else:

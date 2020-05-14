@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 from config.load_config import get_path
 
@@ -25,6 +26,24 @@ def load_oslo_temperature():
     return df["y"].values.reshape(-1, 1)
 
 
+def load_australia_temperature():
+    path = get_path()
+    df = pd.read_csv(path['project path'] + 'data//daily-min-temperatures.csv')
+    df.set_index('Date', inplace=True)
+    df.dropna(how='any', inplace=True)
+    idx = pd.date_range('1981-01-01', freq='D', periods=3650)
+    df.set_index(idx, inplace=True)
+    df["y"] = pd.to_numeric(df["Temp"])
+    return df["y"].values.reshape(-1, 1)
+
+
+def load_electricity():
+    data_array = np.load('electricity.npy')
+    print(data_array.shape)
+    return data_array
+
+
 if __name__ == "__main__":
-    print(load_oslo_temperature())
+    print(load_australia_temperature().shape)
+    load_electricity()
 

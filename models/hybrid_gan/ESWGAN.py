@@ -211,7 +211,7 @@ class ESWGAN(GAN):
             G_loss[epoch] = g_loss
             D_loss[epoch] = d_loss[0]
             # Plot the progress
-            if verbose == 1:
+            if epoch % 100 == 0:
                 print("%d [D loss: %f, acc.: %.2f%%] [G loss: %f, forecast mse: %f]" %
                       (epoch, d_loss[0], 100 * d_loss[1], g_loss, forecast_mse[epoch]))
             # print("KL-divergence: ", kl_divergence[epoch])
