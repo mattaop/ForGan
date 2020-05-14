@@ -5,6 +5,7 @@ gan:
   wasserstein_loss: False # True, False
   learning_rate: 0.001
   discriminator_epochs: 1
+
   noise_vector_size: 50
 
   window_size: 24
