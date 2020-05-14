@@ -1,7 +1,7 @@
 import numpy as np
 from keras import Model
 from keras.layers import *
-from keras.optimizers import RMSprop
+from keras.optimizers import RMSprop, Adam
 from keras import backend
 import matplotlib.pyplot as plt
 from sklearn.metrics import mean_squared_error
@@ -215,7 +215,9 @@ class ESWGAN(GAN):
                 print("%d [D loss: %f, acc.: %.2f%%] [G loss: %f, forecast mse: %f]" %
                       (epoch, d_loss[0], 100 * d_loss[1], g_loss, forecast_mse[epoch]))
             # print("KL-divergence: ", kl_divergence[epoch])
-
+            if verbose == 0 and epoch%100 == 0:
+                print("%d [D loss: %f, acc.: %.2f%%] [G loss: %f, forecast mse: %f]" %
+                      (epoch, d_loss[0], 100 * d_loss[1], g_loss, forecast_mse[epoch]))
             if epoch % self.plot_rate == 0 and verbose == 1:
                 self.plot_distributions(future_time_series, gen_forecasts,
                                         f'ims/' + self.plot_folder + f'/epoch{epoch:03d}.png')
@@ -233,7 +235,7 @@ class ESWGAN(GAN):
         x_train, y_train = split_sequence(es_transform, self.window_size, self.output_size)
 
         # Fit GAN
-        self.fit_gan(x_train[:, :, 0],  y_train[:, :, 0], epochs=epochs, batch_size=batch_size, verbose=1)
+        self.fit_gan(x_train[:, :, 0],  y_train[:, :, 0], epochs=epochs, batch_size=batch_size, verbose=verbose)
         pred_gan = self.forecast(x_train)
 
         # Combine predictions
@@ -250,7 +252,7 @@ class ESWGAN(GAN):
         forecast = np.zeros([x.shape[0], self.mc_forward_passes, self.output_size])
         for i in tqdm(range(x.shape[0])):
             generator_noise = self._generate_noise(batch_size=self.mc_forward_passes)
-            x_input = np.vstack([np.expand_dims(x[i]-es_forecasts[i], axis=0)] * self.mc_forward_passes)
+            x_input = np.vstack([np.expand_dims(x[i], axis=0)] * self.mc_forward_passes)
             forecast[i] = self.generator.predict([x_input[:, :, 0], generator_noise])
         return forecast.mean(axis=1)
 
@@ -269,11 +271,8 @@ class ESWGAN(GAN):
         es_series = np.expand_dims(es_series, axis=0)
 
         data = np.expand_dims(data, axis=0)
-        print(data.shape)
 
         time_series = data - es_series[:, :-self.forecasting_horizon]
-        print(time_series.shape)
-        print(es_series.shape)
 
         es_forecasts = np.zeros([steps, self.forecasting_horizon, 1])
         gan_forecast = np.zeros([steps, self.forecasting_horizon, self.mc_forward_passes])

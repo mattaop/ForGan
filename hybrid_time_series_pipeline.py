@@ -115,7 +115,6 @@ def test_model(gan, data, plot=True):
     forecast_std = forecast.std(axis=-1)
     print('Forecast SD:', forecast_std)
     forecast_var = forecast.var(axis=-1)
-    total_uncertainty = np.sqrt(forecast_var)
     # print('Mutual information:', normalized_mutual_info_score(forecast_mean[:, 0], data[gan.window_size:, 0]))
     if plot:
         x_pred = np.linspace(gan.window_size + 1, len(data), len(data) - gan.window_size)
@@ -133,6 +132,8 @@ def test_model(gan, data, plot=True):
     forecast_mse = sliding_window_mse(forecast_mean, data[gan.window_size:], gan.forecasting_horizon)
     print('Mean forecast MSE:', forecast_mse.mean())
     print('Forecast MSE:', forecast_mse)
+    total_uncertainty = np.sqrt(forecast_var+forecast_mse)
+
     forecast_smape = sliding_window_smape(forecast_mean, data[gan.window_size:], gan.forecasting_horizon)
     print('Mean forecast SMAPE:', forecast_smape.mean())
     print('Forecast SMAPE:', forecast_smape)
@@ -185,11 +186,11 @@ def pipeline():
     forecast_mse_list, forecast_smape_list = [], []
     width_80_1_list, width_95_1_list, width_80_2_list, width_95_2_list = [], [], [], []
     coverage_80_1_list, coverage_95_1_list, coverage_80_2_list, coverage_95_2_list = [], [], [], []
-    for i in range(1):
+    for i in range(5):
         gan = configure_model(cfg=cfg['gan'])
         train, test = load_data(cfg=cfg['data'], window_size=gan.window_size)
         trained_gan = train_gan(gan=gan, data=train, epochs=cfg['gan']['epochs'],
-                                batch_size=cfg['gan']['batch_size'], verbose=0)
+                                batch_size=cfg['gan']['batch_size'], verbose=1)
         forecast_mse, forecast_smape, coverage_80_1, coverage_95_1, coverage_80_2, coverage_95_2, width_80_1, \
             width_95_1, width_80_2, width_95_2 = test_model(gan=trained_gan, data=test, plot=False)
         forecast_mse_list.append(forecast_mse), forecast_smape_list.append(forecast_smape)

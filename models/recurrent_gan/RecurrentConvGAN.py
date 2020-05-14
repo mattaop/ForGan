@@ -72,14 +72,14 @@ class RecurrentConvGAN(GAN):
         noise_inp = Input(shape=noise_shape)
         historic_inp = Input(shape=historic_shape)
 
-        hist = SimpleRNN(64, return_sequences=False)(historic_inp)
+        hist = SimpleRNN(16, return_sequences=False)(historic_inp)
         # hist = LSTM(64, return_sequences=False)(hist)
 
         # hist = ReLU()(hist)
 
         x = Concatenate(axis=1)([hist, noise_inp])
         # x = BatchNormalization()(x)
-        x = Dense(64)(x)
+        x = Dense(32)(x)
         x = ReLU()(x)
         prediction = Dense(self.output_size)(x)
 
@@ -99,7 +99,7 @@ class RecurrentConvGAN(GAN):
         # define the constraint
         const = ClipConstraint(0.1)
 
-        x = Conv1D(64, kernel_size=4, kernel_constraint=const)(x)
+        x = Conv1D(32, kernel_size=4, kernel_constraint=const)(x)
         x = LeakyReLU(alpha=0.1)(x)
         # x = BatchNormalization()(x)
         # x = Dropout(0.2)(x)

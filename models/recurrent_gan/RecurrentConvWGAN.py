@@ -29,7 +29,7 @@ class RecurrentConvWGAN(RecurrentConvGAN):
         noise_inp = Input(shape=noise_shape)
         historic_inp = Input(shape=historic_shape)
 
-        hist = SimpleRNN(32, return_sequences=False)(historic_inp)
+        hist = SimpleRNN(16, return_sequences=False)(historic_inp)
         # hist = ReLU()(hist)
 
         x = Concatenate(axis=1)([hist, noise_inp])
@@ -57,7 +57,7 @@ class RecurrentConvWGAN(RecurrentConvGAN):
         # define the constraint
         const = ClipConstraint(0.1)
 
-        x = Conv1D(64, kernel_size=4, kernel_constraint=const)(x)
+        x = Conv1D(32, kernel_size=4, kernel_constraint=const)(x)
         x = LeakyReLU(alpha=0.1)(x)
         # x = BatchNormalization()(x)
         # x = Dropout(0.2)(x)
@@ -66,8 +66,8 @@ class RecurrentConvWGAN(RecurrentConvGAN):
         # x = LeakyReLU(alpha=0.2)(x)
         # x = Dense(64, kernel_constraint=const)(x)
         # x = LeakyReLU(alpha=0.1)(x)
-        x = Dense(64, kernel_constraint=const)(x)
-        x = LeakyReLU(alpha=0.1)(x)
+        # x = Dense(32, kernel_constraint=const)(x)
+        # x = LeakyReLU(alpha=0.1)(x)
         validity = Dense(1)(x)
 
         model = Model(inputs=[historic_inp, future_inp], outputs=validity)
