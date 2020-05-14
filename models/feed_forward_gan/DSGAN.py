@@ -23,7 +23,7 @@ class DSGAN(GAN):
     def __init__(self, cfg):
         GAN.__init__(self, cfg)
         self.plot_folder = 'feed_forward_DSGAN'
-        self.noise_vector_size = 10  # Try larger vector
+        self.noise_vector_size = 50  # Try larger vector
         self.noise_type = 'normal'  # uniform
 
         self.alpha = 0.01
@@ -302,7 +302,7 @@ if __name__ == '__main__':
     coverage_80_PI_1, coverage_95_PI_1 = [], []
     coverage_80_PI_2, coverage_95_PI_2 = [], []
     kl_div, uncertainty_list = [], []
-    for i in range(10):
+    for i in range(5):
         gan = DSGAN(config['gan'])
         gan.build_model()
         gan.train(epochs=2000, batch_size=1024)

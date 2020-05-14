@@ -3,7 +3,7 @@ gan:
   epochs: 2500
   batch_size: 256
   wasserstein_loss: False # True, False
-  learning_rate: 0.001
+  learning_rate: 0.002
   discriminator_epochs: 1
 
   noise_vector_size: 50
