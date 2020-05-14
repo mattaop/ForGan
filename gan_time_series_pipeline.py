@@ -29,7 +29,7 @@ from config.load_config import load_config_file
 from models.get_model import get_gan
 from utility.split_data import split_sequence
 from data.generate_sine import generate_sine_data
-from data.load_data import load_oslo_temperature
+from data.load_data import load_oslo_temperature, load_australia_temperature
 from utility.compute_statistics import *
 
 
@@ -51,6 +51,9 @@ def load_data(cfg, window_size):
         data = generate_sine_data(num_points=1000)
     elif cfg['data_source'].lower() == 'oslo':
         data = load_oslo_temperature()
+    elif cfg['data_source'].lower() == 'australia':
+        data = load_australia_temperature()
+
     else:
         return None
     print('Data shape', data.shape)
@@ -127,7 +130,7 @@ def test_model(gan, data, validation_mse, plot=True):
     forecast_mean = forecast.mean(axis=-1)
     forecast_std = forecast.std(axis=-1)
     forecast_var = forecast.var(axis=-1)
-    print('Forecast std', forecast_std)
+    # print('Forecast std', forecast_std)
 
     # print('Mutual information:', normalized_mutual_info_score(forecast_mean[:, 0], data[gan.window_size:, 0]))
     total_uncertainty = np.sqrt(forecast_var + validation_mse)
@@ -142,13 +145,13 @@ def test_model(gan, data, validation_mse, plot=True):
                          alpha=0.2, edgecolor='#CC4F1B', facecolor='#FF9848', label='95%-PI')
         plt.legend()
         plt.show()
-    print('Mean validation MSE:', validation_mse.mean())
+    # print('Mean validation MSE:', validation_mse.mean())
     forecast_mse = sliding_window_mse(forecast_mean, data[gan.window_size:], gan.forecasting_horizon)
-    print('Mean forecast MSE:', forecast_mse.mean())
-    print('Forecast MSE:',forecast_mse)
+    # print('Mean forecast MSE:', forecast_mse.mean())
+    # print('Forecast MSE:', forecast_mse)
     forecast_smape = sliding_window_smape(forecast_mean, data[gan.window_size:], gan.forecasting_horizon)
-    print('Mean forecast SMAPE:', forecast_smape.mean())
-    print('Forecast SMAPE:', forecast_smape)
+    # print('Mean forecast SMAPE:', forecast_smape.mean())
+    # print('Forecast SMAPE:', forecast_smape)
 
     # print('Mean validation MSE:', validation_mse.mean())
     # print('Validation MSE:', validation_mse)
@@ -165,7 +168,7 @@ def test_model(gan, data, validation_mse, plot=True):
     coverage_80_2 = sliding_window_coverage(actual_values=data[gan.window_size:],
                                             upper_limits=forecast_mean + 1.28*total_uncertainty,
                                             lower_limits=forecast_mean - 1.28*total_uncertainty,
-                                            forecast_horizon=gan.forecasting_horizon).mean()
+                                            forecast_horizon=gan.forecasting_horizon)
     coverage_95_2 = sliding_window_coverage(actual_values=data[gan.window_size:],
                                             upper_limits=forecast_mean + 1.96 * total_uncertainty,
                                             lower_limits=forecast_mean - 1.96 * total_uncertainty,

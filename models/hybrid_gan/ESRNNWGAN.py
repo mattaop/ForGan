@@ -2,6 +2,7 @@ import numpy as np
 from keras import Model
 from keras.layers import *
 from keras.optimizers import RMSprop
+from keras.regularizers import L1L2
 from keras import backend
 import matplotlib.pyplot as plt
 from sklearn.metrics import mean_squared_error
@@ -83,7 +84,8 @@ class ESRNNWGAN(GAN):
         noise_inp = Input(shape=noise_shape)
         historic_inp = Input(shape=historic_shape)
 
-        hist = SimpleRNN(8, return_sequences=False)(historic_inp)
+        hist = SimpleRNN(16, return_sequences=False)(historic_inp)
+
         # hist = Dropout(0.2)(hist)
         # hist = ReLU()(hist)
 
@@ -211,6 +213,7 @@ class ESRNNWGAN(GAN):
 
             idx = np.random.randint(0, x.shape[0], batch_size)
             historic_time_series = x[idx]
+
             # Train the generator
             g_loss = self.combined.train_on_batch([historic_time_series, generator_noise], valid_y)
 
@@ -221,7 +224,7 @@ class ESRNNWGAN(GAN):
             G_loss[epoch] = g_loss
             D_loss[epoch] = d_loss[0]
             # Plot the progress
-            if verbose == 1:
+            if epoch % 100 == 0 and verbose == 1:
                 print("%d [D loss: %f, acc.: %.2f%%] [G loss: %f, forecast mse: %f]" %
                       (epoch, d_loss[0], 100 * d_loss[1], g_loss, forecast_mse[epoch]))
             # print("KL-divergence: ", kl_divergence[epoch])
@@ -248,6 +251,7 @@ class ESRNNWGAN(GAN):
 
         # Fit GAN
         self.fit_gan(x_train,  y_train, epochs=epochs, batch_size=batch_size, verbose=verbose)
+
         pred_gan = self.forecast(x_train)
 
         # Combine predictions
@@ -296,6 +300,6 @@ class ESRNNWGAN(GAN):
             else:
                 generator_noise = self._generate_noise(batch_size=self.mc_forward_passes)
                 x_input = np.vstack([time_series[:, i:self.window_size + i]]*self.mc_forward_passes)
-                gan_forecast[i] = self.generator.predict([x_input, generator_noise]).transpose()
+                gan_forecast[i] = self.generator.predict([x_input, np.vstack([es_forecasts[i]]*self.mc_forward_passes), generator_noise]).transpose()
         forecast = gan_forecast + np.dstack([es_forecasts]*self.mc_forward_passes)
         return forecast

@@ -67,6 +67,7 @@ class RecurrentConvWGAN(RecurrentConvGAN):
         # x = Dense(64, kernel_constraint=const)(x)
         # x = LeakyReLU(alpha=0.1)(x)
         # x = Dense(32, kernel_constraint=const)(x)
+
         # x = LeakyReLU(alpha=0.1)(x)
         validity = Dense(1)(x)
 
