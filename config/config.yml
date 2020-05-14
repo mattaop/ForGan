@@ -1,4 +1,5 @@
 gan:
+
   model_name: RecurrentConvDSGAN # GAN, ConvGAN, RecurrentGAN, RecurrentConvGAN, RNN, RecurrentConvDSGAN
   epochs: 2500
   batch_size: 256

@@ -84,8 +84,8 @@ class ESRNNWGAN(GAN):
         noise_inp = Input(shape=noise_shape)
         historic_inp = Input(shape=historic_shape)
 
-        # hist = SimpleRNN(16, return_sequences=False)(historic_inp)
-        hist = GRU(16, return_sequences=False, kernel_regularizer=L1L2(l1=0.001))(historic_inp)
+        hist = SimpleRNN(16, return_sequences=False)(historic_inp)
+
         # hist = Dropout(0.2)(hist)
         # hist = ReLU()(hist)
 
@@ -114,7 +114,12 @@ class ESRNNWGAN(GAN):
         # define the constraint
         const = ClipConstraint(0.1)
 
-        x = Conv1D(32, kernel_size=4, kernel_constraint=const)(x)
+        x = Conv1D(16, kernel_size=4, kernel_constraint=const)(x)
+        x = LeakyReLU(alpha=0.1)(x)
+        # x = BatchNormalization()(x)
+        # x = Dropout(0.2)(x)
+        x = MaxPooling1D(pool_size=2)(x)
+        x = Conv1D(16, kernel_size=4, kernel_constraint=const)(x)
         x = LeakyReLU(alpha=0.1)(x)
         # x = BatchNormalization()(x)
         # x = Dropout(0.2)(x)
@@ -223,6 +228,9 @@ class ESRNNWGAN(GAN):
                 print("%d [D loss: %f, acc.: %.2f%%] [G loss: %f, forecast mse: %f]" %
                       (epoch, d_loss[0], 100 * d_loss[1], g_loss, forecast_mse[epoch]))
             # print("KL-divergence: ", kl_divergence[epoch])
+            if verbose == 0 and epoch%100 == 0:
+                print("%d [D loss: %f, acc.: %.2f%%] [G loss: %f, forecast mse: %f]" %
+                      (epoch, d_loss[0], 100 * d_loss[1], g_loss, forecast_mse[epoch]))
 
             if epoch % self.plot_rate == 0 and verbose == 1:
                 self.plot_distributions(future_time_series[:, :, 0], gen_forecasts,
@@ -242,7 +250,8 @@ class ESRNNWGAN(GAN):
         x_train, y_train = split_sequence(es_transform, self.window_size, self.output_size)
 
         # Fit GAN
-        self.fit_gan(x_train, y_train, epochs=epochs, batch_size=batch_size, verbose=1)
+        self.fit_gan(x_train,  y_train, epochs=epochs, batch_size=batch_size, verbose=verbose)
+
         pred_gan = self.forecast(x_train)
 
         # Combine predictions
