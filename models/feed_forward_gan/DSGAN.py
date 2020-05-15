@@ -26,8 +26,8 @@ class DSGAN(GAN):
         self.noise_vector_size = 50  # Try larger vector
         self.noise_type = 'normal'  # uniform
 
-        self.alpha = 0.01
-        self.beta = 0.01
+        self.alpha = 0.1
+        self.beta = 0
         self.tau = 5
         self.diversity_loss = DiversitySensitiveLoss(self.alpha, self.beta, self.tau, self.discriminator_loss)
         self.generator_loss = self.diversity_loss.dummy_loss
@@ -302,15 +302,16 @@ if __name__ == '__main__':
     coverage_80_PI_1, coverage_95_PI_1 = [], []
     coverage_80_PI_2, coverage_95_PI_2 = [], []
     kl_div, uncertainty_list = [], []
-    for i in range(5):
+    for i in range(1):
         gan = DSGAN(config['gan'])
         gan.build_model()
-        gan.train(epochs=2000, batch_size=1024)
+        gan.train(epochs=20, batch_size=1024)
         predictions = gan.monte_carlo_prediction(generate_noise(5000), mc_forward_passes=5000)
         prediction_mean = predictions.mean(axis=0)
         uncertainty = predictions.std(axis=0)
-        print(gan.compute_kl_divergence(predictions, generate_noise(5000)))
-        kl_div.append(gan.compute_kl_divergence(predictions, generate_noise(5000)))
+        print(predictions)
+        kl_div.append(gan.compute_kl_divergence(generate_noise(5000), predictions))
+        print(kl_div)
         uncertainty_list.append(uncertainty)
         coverage_80_PI_1.append(compute_coverage(upper_limits=np.vstack([np.quantile(predictions, q=0.9, axis=0)]*10000),
                                                  lower_limits=np.vstack([np.quantile(predictions, q=0.1, axis=0)]*10000),
@@ -329,5 +330,5 @@ if __name__ == '__main__':
 
     print('80% PI Coverage:', np.mean(coverage_80_PI_2), ', std:', np.std(coverage_80_PI_2))
     print('95% PI Coverage:', np.mean(coverage_95_PI_2), ', std:', np.std(coverage_95_PI_2))
-    print('KL-divergence mean:', np.mean(kl_div), ', std:', np.std(kl_div))
-    print('Uncertainty mean:', np.mean(uncertainty_list), ', std:', np.std(uncertainty_list))
+    print('KL-divergence:', np.mean(kl_div), ', std:', np.std(kl_div))
+    print('Uncertainty:', np.mean(uncertainty_list), ', std:', np.std(uncertainty_list))

@@ -60,7 +60,6 @@ if __name__ == '__main__':
     coverage_80_PI_1, coverage_95_PI_1 = [], []
     coverage_80_PI_2, coverage_95_PI_2 = [], []
     kl_div, uncertainty_list = [], []
-
     for i in range(10):
         gan = WGAN(config['gan'])
         gan.build_model()

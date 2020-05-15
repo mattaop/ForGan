@@ -8,10 +8,12 @@ from keras.optimizers import Adam
 import tensorflow as tf
 from tqdm import tqdm
 
+from config.load_config import load_config_file
 from utility.ClipConstraint import ClipConstraint
 from utility.split_data import split_sequence
 from data.generate_noise import generate_noise
 from models.feed_forward_gan.GAN import GAN
+from utility.compute_statistics import compute_coverage
 
 
 class RecurrentConvGAN(GAN):
@@ -73,12 +75,11 @@ class RecurrentConvGAN(GAN):
         historic_inp = Input(shape=historic_shape)
 
         hist = SimpleRNN(16, return_sequences=False)(historic_inp)
-        # hist = LSTM(64, return_sequences=False)(hist)
-
-        # hist = ReLU()(hist)
+        # hist = LSTM(16, return_sequences=False)(historic_inp)
+        # hist = GRU(16, return_sequences=False)(historic_inp)
 
         x = Concatenate(axis=1)([hist, noise_inp])
-        # x = BatchNormalization()(x)
+        x = BatchNormalization()(x)
         x = Dense(32)(x)
         x = ReLU()(x)
         prediction = Dense(self.output_size)(x)
@@ -99,7 +100,7 @@ class RecurrentConvGAN(GAN):
         # define the constraint
         const = ClipConstraint(0.1)
 
-        x = Conv1D(32, kernel_size=4, kernel_constraint=const)(x)
+        x = Conv1D(16, kernel_size=4, kernel_constraint=const)(x)
         x = LeakyReLU(alpha=0.1)(x)
         # x = BatchNormalization()(x)
         # x = Dropout(0.2)(x)
@@ -110,9 +111,11 @@ class RecurrentConvGAN(GAN):
         # x = Dropout(0.2)(x)
         # x = MaxPooling1D(pool_size=2)(x)
         x = Flatten()(x)
+        x = Dropout(0.4)(x)
         # x = LeakyReLU(alpha=0.2)(x)
-        x = Dense(64)(x)
+        x = Dense(32)(x)
         x = LeakyReLU(alpha=0.1)(x)
+        x = Dropout(0.4)(x)
         validity = Dense(1, activation='sigmoid')(x)
 
         model = Model(inputs=[historic_inp, future_inp], outputs=validity)
@@ -182,11 +185,11 @@ class RecurrentConvGAN(GAN):
             #                           for i in range(self.forecasting_horizon))/self.forecasting_horizon
 
             # Plot the progress
-            print("%d [D loss: %f, acc.: %.2f%%] [G loss: %f, forecast mse: %f]" %
-                  (epoch, d_loss[0], 100 * d_loss[1], g_loss, forecast_mse[epoch]))
             # print("KL-divergence: ", kl_divergence[epoch])
 
             if epoch % self.plot_rate == 0:
+                print("%d [D loss: %f, acc.: %.2f%%] [G loss: %f, forecast mse: %f]" %
+                      (epoch, d_loss[0], 100 * d_loss[1], g_loss, forecast_mse[epoch]))
                 self.plot_distributions(future_time_series[:, :, 0], gen_forecasts,
                                         f'ims/' + self.plot_folder + f'/epoch{epoch:03d}.png')
 
@@ -313,9 +316,37 @@ class RecurrentConvGAN(GAN):
 
 
 if __name__ == '__main__':
-    gan = RecurrentConvGAN()
-    gan.build_gan()
-    gan.train(epochs=500, batch_size=512, discriminator_epochs=1)
-    gan.monte_carlo_forecast(data=generate_noise(gan.window_size + gan.forecasting_horizon),
-                             steps=1, plot=True)
+    data = generate_noise(5000)
+    config = load_config_file('C:\\Users\\mathi\\PycharmProjects\\gan\\config\\config.yml')
+    coverage_80_PI_1, coverage_95_PI_1 = [], []
+    coverage_80_PI_2, coverage_95_PI_2 = [], []
+    kl_div, uncertainty_list = [], []
+    for i in range(1):
+        gan = RecurrentConvGAN(config['gan'])
+        gan.build_model()
+        gan.train(epochs=2000, batch_size=32)
+        predictions = gan.monte_carlo_prediction(generate_noise(5000), mc_forward_passes=5000)
+        prediction_mean = predictions.mean(axis=0)
+        uncertainty = predictions.std(axis=0)
+        kl_div.append(gan.compute_kl_divergence(predictions, generate_noise(5000)))
+        uncertainty_list.append(uncertainty)
+        coverage_80_PI_1.append(compute_coverage(upper_limits=np.vstack([np.quantile(predictions, q=0.9, axis=0)]*10000),
+                                                 lower_limits=np.vstack([np.quantile(predictions, q=0.1, axis=0)]*10000),
+                                                 actual_values=generate_noise(10000)))
+        coverage_95_PI_1.append(compute_coverage(upper_limits=np.vstack([np.quantile(predictions, q=0.975, axis=0)]*10000),
+                                                 lower_limits=np.vstack([np.quantile(predictions, q=0.025, axis=0)]*10000),
+                                                 actual_values=generate_noise(10000)))
+        coverage_80_PI_2.append(compute_coverage(upper_limits=np.vstack([prediction_mean+1.28*uncertainty]*10000),
+                                                 lower_limits=np.vstack([prediction_mean-1.28*uncertainty]*10000),
+                                                 actual_values=generate_noise(10000)))
+        coverage_95_PI_2.append(compute_coverage(upper_limits=np.vstack([prediction_mean+1.96*uncertainty]*10000),
+                                                 lower_limits=np.vstack([prediction_mean-1.96*uncertainty]*10000),
+                                                 actual_values=generate_noise(10000)))
+    print('80% PI Coverage:', np.mean(coverage_80_PI_1), ', std:', np.std(coverage_80_PI_1))
+    print('95% PI Coverage:', np.mean(coverage_95_PI_1), ', std:', np.std(coverage_95_PI_1))
+
+    print('80% PI Coverage:', np.mean(coverage_80_PI_2), ', std:', np.std(coverage_80_PI_2))
+    print('95% PI Coverage:', np.mean(coverage_95_PI_2), ', std:', np.std(coverage_95_PI_2))
+    print('KL-divergence mean:', np.mean(kl_div), ', std:', np.std(kl_div))
+    print('Uncertainty mean:', np.mean(uncertainty_list), ', std:', np.std(uncertainty_list))
 

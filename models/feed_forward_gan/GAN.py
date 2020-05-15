@@ -14,7 +14,6 @@ from keras import backend as K
 from config.load_config import load_config_file
 from data.generate_noise import generate_noise
 from utility.compute_statistics import compute_coverage
-from utility.diversity_sensitive_loss import DiversitySensitiveLoss
 
 
 class GAN:
@@ -281,7 +280,7 @@ class GAN:
         m = (1. / 2.) * (p + q)
         return (1. / 2.) * self.kl_divergence(p, m) + (1. / 2.) * self.kl_divergence(q, m)
 
-    def compute_kl_divergence(self, train_sample, test_sample, n_bins=1000):
+    def compute_kl_divergence(self, train_sample, test_sample, n_bins=100):
         """
         Computes the KL Divergence using the support intersection between two different samples
         """
@@ -290,6 +289,11 @@ class GAN:
 
         list_of_tuples = self.support_intersection(p, q)
         p, q = self.get_probs(list_of_tuples)
+        print(np.sum(p))
+        print(np.sum(q))
+
+        print(self.kl_divergence(p, q))
+        print(self.kl_divergence(q, p))
 
         return self.kl_divergence(p, q)
 
@@ -315,7 +319,7 @@ if __name__ == '__main__':
     for i in range(5):
         gan = GAN(config['gan'])
         gan.build_model()
-        gan.train(epochs=2000, batch_size=1024)
+        gan.train(epochs=2000, batch_size=32)
         predictions = gan.monte_carlo_prediction(generate_noise(5000), mc_forward_passes=5000)
         prediction_mean = predictions.mean(axis=0)
         uncertainty = predictions.std(axis=0)

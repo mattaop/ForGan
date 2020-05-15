@@ -4,8 +4,8 @@ gan:
   epochs: 2500
   batch_size: 256
   wasserstein_loss: False # True, False
-  learning_rate: 0.002
-  discriminator_epochs: 1
+  learning_rate: 0.0001
+  discriminator_epochs: 3
 
   noise_vector_size: 50
 
@@ -13,7 +13,7 @@ gan:
   forecast_horizon: 1
   recurrent_forecasting: True # True, False
   mc_forward_passes: 5000
-  plot_rate: 25
+  plot_rate: 100
 
 data:
   data_source: oslo # sine, oslo, australia
