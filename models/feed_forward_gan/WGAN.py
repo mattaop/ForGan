@@ -59,7 +59,7 @@ if __name__ == '__main__':
     config = load_config_file('C:\\Users\\mathi\\PycharmProjects\\gan\\config\\config.yml')
     coverage_80_PI_1, coverage_95_PI_1 = [], []
     coverage_80_PI_2, coverage_95_PI_2 = [], []
-    kl_div, uncertainty_list = [], []
+    kl_div, js_div, uncertainty_list = [], [], []
     for i in range(10):
         gan = WGAN(config['gan'])
         gan.build_model()
@@ -68,6 +68,7 @@ if __name__ == '__main__':
         prediction_mean = predictions.mean(axis=0)
         uncertainty = predictions.std(axis=0)
         kl_div.append(gan.compute_kl_divergence(predictions, generate_noise(5000)))
+        js_div.append(gan.compute_js_divergence(predictions, generate_noise(5000)))
         uncertainty_list.append(uncertainty)
         coverage_80_PI_1.append(
             compute_coverage(upper_limits=np.vstack([np.quantile(predictions, q=0.9, axis=0)] * 10000),
@@ -89,4 +90,5 @@ if __name__ == '__main__':
     print('80% PI Coverage:', np.mean(coverage_80_PI_2), ', std:', np.std(coverage_80_PI_2))
     print('95% PI Coverage:', np.mean(coverage_95_PI_2), ', std:', np.std(coverage_95_PI_2))
     print('KL-divergence mean:', np.mean(kl_div), ', std:', np.std(kl_div))
+    print('JS-divergence mean:', np.mean(js_div), ', std:', np.std(js_div))
     print('Uncertainty mean:', np.mean(uncertainty_list), ', std:', np.std(uncertainty_list))
