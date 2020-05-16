@@ -20,7 +20,7 @@ class GAN:
     def __init__(self, cfg):
         self.plot_rate = cfg['plot_rate']
         self.plot_folder = 'feed_forward_GAN'
-        self.noise_vector_size = 50  # Try larger vector
+        self.noise_vector_size = 100  # Try larger vector
         self.noise_type = 'normal'  # uniform
         self.discriminator_epochs = cfg['discriminator_epochs']
 
@@ -63,7 +63,7 @@ class GAN:
         # The combined model  (stacked generator and discriminator) takes
         # noise as input => generates images => determines validity
         self.combined = Model(inputs=z, outputs=valid)
-        self.combined.summary()
+        # self.combined.summary()
         self.combined.compile(loss=self.generator_loss, optimizer=self.optimizer)
 
     def build_generator(self):
@@ -74,7 +74,7 @@ class GAN:
         x = Dense(16)(noise_inp)
         x = ReLU()(x)
         # x = Dropout(0.1)(x)
-        x = BatchNormalization()(x)
+        # x = BatchNormalization()(x)
         # x = Dense(16)(x)
         # x = ReLU()(x)
         # x = BatchNormalization()(x)
@@ -92,10 +92,10 @@ class GAN:
 
         x = Dense(64)(future_inp)
         x = LeakyReLU(alpha=0.1)(x)
-        x = Dropout(0.1)(x)
+        # x = Dropout(0.1)(x)
         x = Dense(64)(x)
         x = LeakyReLU(alpha=0.1)(x)
-        x = Dropout(0.4)(x)
+        # x = Dropout(0.4)(x)
         validity = Dense(1, activation='sigmoid')(x)
 
         model = Model(inputs=future_inp, outputs=validity)
@@ -286,15 +286,8 @@ class GAN:
         """
         e, p = self.compute_probs(train_sample, n=n_bins)
         _, q = self.compute_probs(test_sample, n=e)
-
         list_of_tuples = self.support_intersection(p, q)
         p, q = self.get_probs(list_of_tuples)
-        print(np.sum(p))
-        print(np.sum(q))
-
-        print(self.kl_divergence(p, q))
-        print(self.kl_divergence(q, p))
-
         return self.kl_divergence(p, q)
 
     def compute_js_divergence(self, train_sample, test_sample, n_bins=100):
@@ -311,12 +304,11 @@ class GAN:
 
 
 if __name__ == '__main__':
-    data = generate_noise(5000)
     config = load_config_file('C:\\Users\\mathi\\PycharmProjects\\gan\\config\\config.yml')
     coverage_80_PI_1, coverage_95_PI_1 = [], []
     coverage_80_PI_2, coverage_95_PI_2 = [], []
-    kl_div, uncertainty_list = [], []
-    for i in range(5):
+    kl_div, js_div, uncertainty_list = [], [], []
+    for i in range(10):
         gan = GAN(config['gan'])
         gan.build_model()
         gan.train(epochs=2000, batch_size=32)
@@ -324,6 +316,7 @@ if __name__ == '__main__':
         prediction_mean = predictions.mean(axis=0)
         uncertainty = predictions.std(axis=0)
         kl_div.append(gan.compute_kl_divergence(predictions, generate_noise(5000)))
+        js_div.append(gan.compute_js_divergence(predictions, generate_noise(5000)))
         uncertainty_list.append(uncertainty)
         coverage_80_PI_1.append(compute_coverage(upper_limits=np.vstack([np.quantile(predictions, q=0.9, axis=0)]*10000),
                                                  lower_limits=np.vstack([np.quantile(predictions, q=0.1, axis=0)]*10000),
@@ -343,5 +336,6 @@ if __name__ == '__main__':
     print('80% PI Coverage:', np.mean(coverage_80_PI_2), ', std:', np.std(coverage_80_PI_2))
     print('95% PI Coverage:', np.mean(coverage_95_PI_2), ', std:', np.std(coverage_95_PI_2))
     print('KL-divergence mean:', np.mean(kl_div), ', std:', np.std(kl_div))
+    print('JS-divergence mean:', np.mean(js_div), ', std:', np.std(js_div))
     print('Uncertainty mean:', np.mean(uncertainty_list), ', std:', np.std(uncertainty_list))
 

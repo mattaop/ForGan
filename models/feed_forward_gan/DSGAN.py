@@ -283,18 +283,6 @@ class DSGAN(GAN):
         # self.plot_distributions(real_samples=data, fake_samples=prediction)
         return prediction
 
-    # calculate the kl divergence
-    def kl_divergence(self, p, q):
-        """Kullback-Leibler divergence D(P || Q) for discrete distributions
-                    Parameters
-                    ----------
-                    p, q : array-like, dtype=float, shape=n
-                    Discrete probability distributions.
-                    """
-        p = normalize(p.reshape(-1, 1)).flatten()
-        q = normalize(q.reshape(-1, 1)).flatten()
-        return np.sum(np.where(p != 0, p * np.log(p / q), 0))
-
 
 if __name__ == '__main__':
     data = generate_noise(5000)
@@ -309,8 +297,7 @@ if __name__ == '__main__':
         predictions = gan.monte_carlo_prediction(generate_noise(5000), mc_forward_passes=5000)
         prediction_mean = predictions.mean(axis=0)
         uncertainty = predictions.std(axis=0)
-        print(predictions)
-        kl_div.append(gan.compute_kl_divergence(generate_noise(5000), predictions))
+        kl_div.append(gan.compute_kl_divergence(predictions, generate_noise(5000)))
         print(kl_div)
         uncertainty_list.append(uncertainty)
         coverage_80_PI_1.append(compute_coverage(upper_limits=np.vstack([np.quantile(predictions, q=0.9, axis=0)]*10000),

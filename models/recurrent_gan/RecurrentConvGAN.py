@@ -316,7 +316,6 @@ class RecurrentConvGAN(GAN):
 
 
 if __name__ == '__main__':
-    data = generate_noise(5000)
     config = load_config_file('C:\\Users\\mathi\\PycharmProjects\\gan\\config\\config.yml')
     coverage_80_PI_1, coverage_95_PI_1 = [], []
     coverage_80_PI_2, coverage_95_PI_2 = [], []
@@ -324,9 +323,10 @@ if __name__ == '__main__':
     for i in range(1):
         gan = RecurrentConvGAN(config['gan'])
         gan.build_model()
-        gan.train(epochs=2000, batch_size=32)
-        predictions = gan.monte_carlo_prediction(generate_noise(5000), mc_forward_passes=5000)
+        gan.train(epochs=200, batch_size=32)
+        predictions = gan.monte_carlo_forecast(generate_noise(5000))[0, 0]
         prediction_mean = predictions.mean(axis=0)
+        print(predictions.shape)
         uncertainty = predictions.std(axis=0)
         kl_div.append(gan.compute_kl_divergence(predictions, generate_noise(5000)))
         uncertainty_list.append(uncertainty)
