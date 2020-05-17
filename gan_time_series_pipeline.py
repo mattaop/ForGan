@@ -48,7 +48,7 @@ def configure_model(cfg):
 
 def load_data(cfg, window_size):
     if cfg['data_source'].lower() == 'sine':
-        data = generate_sine_data(num_points=1000)
+        data = generate_sine_data(num_points=5000)
     elif cfg['data_source'].lower() == 'oslo':
         data = load_oslo_temperature()
     elif cfg['data_source'].lower() == 'australia':
@@ -64,7 +64,7 @@ def load_data(cfg, window_size):
 
 
 def scale_data(train, test):
-    scaler = MinMaxScaler(feature_range=(10 ** (-10), 1))
+    scaler = MinMaxScaler(feature_range=(0, 1))
     train = scaler.fit_transform(train)
     test = scaler.transform(test)
     return train, test
@@ -201,12 +201,12 @@ def test_model(gan, data, validation_mse, plot=True):
                                                 forecast_horizon=gan.forecasting_horizon),
                      y2_label='95% PI coverage',
                      title='Prediction Interval Coverage', y_label='Coverage')
-    return forecast_mse, forecast_smape, coverage_80_1, coverage_95_1, coverage_80_2, coverage_95_2, width_80_1, width_95_1, width_80_2, width_95_2
+    return forecast_mse, forecast_smape, coverage_80_1, coverage_95_1, coverage_80_2, coverage_95_2, width_80_1, width_95_1, width_80_2, width_95_2, forecast_std
 
 
 def pipeline():
     cfg = load_config_file('config\\config.yml')
-    forecast_mse_list, forecast_smape_list, validation_mse_list = [], [], []
+    forecast_mse_list, forecast_smape_list, validation_mse_list, forecast_std_list = [], [], [], []
     width_80_1_list, width_95_1_list, width_80_2_list, width_95_2_list = [], [], [], []
     coverage_80_1_list, coverage_95_1_list, coverage_80_2_list, coverage_95_2_list = [], [], [], []
     for i in range(1):
@@ -215,8 +215,9 @@ def pipeline():
         trained_gan, validation_mse = train_gan(gan=gan, data=train, epochs=cfg['gan']['epochs'],
                                                 batch_size=cfg['gan']['batch_size'], verbose=0)
         forecast_mse, forecast_smape, coverage_80_1, coverage_95_1, coverage_80_2, coverage_95_2, width_80_1, \
-            width_95_1, width_80_2, width_95_2 = test_model(gan=trained_gan, data=test, validation_mse=validation_mse, plot=False)
+            width_95_1, width_80_2, width_95_2, forecast_std = test_model(gan=trained_gan, data=test, validation_mse=validation_mse, plot=False)
         forecast_mse_list.append(forecast_mse), forecast_smape_list.append(forecast_smape), validation_mse_list.append(validation_mse)
+        forecast_std_list.append(forecast_std)
         coverage_80_1_list.append(coverage_80_1), coverage_95_1_list.append(coverage_95_1)
         coverage_80_2_list.append(coverage_80_2), coverage_95_2_list.append(coverage_95_2)
         width_80_1_list.append(width_80_1), width_95_1_list.append(width_95_1)
@@ -227,6 +228,7 @@ def pipeline():
     print('Forecast MSE:', np.mean(np.array(forecast_mse_list), axis=0))
     print('Mean forecast SMAPE:', np.mean(np.mean(forecast_smape_list, axis=0)))
     print('Forecast SMAPE:', np.mean(np.array(forecast_smape_list), axis=0))
+    print('Estimated Standard deviation:', np.mean(forecast_std_list, axis=0), np.std(forecast_std_list, axis=0))
     print('80%-prediction interval coverage - Mean:', np.mean(np.mean(coverage_80_1_list, axis=0)),
           ', width:', np.mean(width_80_1_list),
           '\n Forecast horizon:', np.mean(np.array(coverage_80_1_list), axis=0))

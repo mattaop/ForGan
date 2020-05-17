@@ -12,10 +12,7 @@ from utility.ClipConstraint import ClipConstraint
 class ConvWGAN(ConvGAN):
     def __init__(self, cfg):
         ConvGAN.__init__(self, cfg)
-        self.plot_rate = cfg['plot_rate']
         self.plot_folder = 'ConvWGAN'
-        self.noise_vector_size = 100  # Try larger vector
-
         self.optimizer = RMSprop(lr=cfg['learning_rate'])
         self.loss_function = self.wasserstein_loss
 
@@ -40,7 +37,7 @@ class ConvWGAN(ConvGAN):
         # x = BatchNormalization()(x)
         x = Dense(32, activation='relu')(x)
         # x = Dense(16, activation='relu')(x)
-        prediction = Dense(self.forecasting_horizon)(x)
+        prediction = Dense(self.output_size)(x)
 
         model = Model(inputs=[historic_inp, noise_inp], outputs=prediction)
         model.summary()
@@ -48,7 +45,7 @@ class ConvWGAN(ConvGAN):
 
     def build_discriminator(self):
         historic_shape = (self.window_size, 1)
-        future_shape = (self.forecasting_horizon, 1)
+        future_shape = (self.output_size, 1)
 
         historic_inp = Input(shape=historic_shape)
         future_inp = Input(shape=future_shape)
@@ -82,11 +79,3 @@ class ConvWGAN(ConvGAN):
             return np.ones((batch_size, 1))
         else:
             return -np.ones((batch_size, 1))
-
-
-if __name__ == '__main__':
-    gan = ConvWGAN()
-    gan.build_gan()
-    gan.train(epochs=15000, batch_size=128, discriminator_epochs=2)
-    gan.monte_carlo_forecast(data=generate_noise(gan.window_size+gan.forecasting_horizon),
-                             steps=1, mc_forward_passes=5000, plot=True)

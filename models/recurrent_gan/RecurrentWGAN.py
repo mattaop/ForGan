@@ -14,7 +14,6 @@ class RecurrentWGAN(RecurrentGAN, WGAN):
         RecurrentGAN.__init__(self, cfg)
         WGAN.__init__(self, cfg)
         self.plot_folder = 'RecurrentWGAN'
-
         self.optimizer = RMSprop(lr=cfg['learning_rate'])
         self.loss_function = self.wasserstein_loss
 

@@ -81,11 +81,3 @@ class RecurrentConvWGAN(RecurrentConvGAN):
             return np.ones((batch_size, 1))
         else:
             return -np.ones((batch_size, 1))
-
-
-if __name__ == '__main__':
-    gan = RecurrentConvWGAN()
-    gan.build_gan()
-    gan.train(epochs=5000, batch_size=256, discriminator_epochs=3)
-    gan.monte_carlo_forecast(data=generate_noise(gan.window_size+gan.forecasting_horizon),
-                             steps=1, mc_forward_passes=5000, plot=True)

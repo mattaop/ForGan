@@ -13,26 +13,14 @@ from keras.losses import binary_crossentropy
 from utility.ClipConstraint import ClipConstraint
 from utility.split_data import split_sequence
 from data.generate_noise import generate_noise
-from models.feed_forward_gan.GAN import GAN
+from models.recurrent_gan.RecurrentGAN import RecurrentGAN
 from utility.diversity_sensitive_loss import DiversitySensitiveLoss
 
 
-class RecurrentConvDSGAN(GAN):
+class RecurrentConvDSGAN(RecurrentGAN):
     def __init__(self, cfg):
-        GAN.__init__(self, cfg)
-        self.plot_rate = cfg['plot_rate']
-        self.plot_folder = 'RecurrentConvGAN'
-        self.window_size = cfg['window_size']
-        self.forecasting_horizon = cfg['forecast_horizon']
-        self.recurrent_forecasting = cfg['recurrent_forecasting']
-        if self.recurrent_forecasting:
-            self.output_size = 1
-        else:
-            self.output_size = self.forecasting_horizon
-
-        self.noise_vector_size = cfg['noise_vector_size']   # Try larger vector
-        self.discriminator_epochs = cfg['discriminator_epochs']
-        self.mc_forward_passes = cfg['mc_forward_passes']
+        RecurrentGAN.__init__(self, cfg)
+        self.plot_folder = 'RecurrentConvDSGAN'
 
         self.optimizer = Adam(cfg['learning_rate'], 0.5)
         self.alpha = 0.2
@@ -134,81 +122,6 @@ class RecurrentConvDSGAN(GAN):
 
         return model
 
-    def train(self, epochs, batch_size=128, data_samples=5000):
-        paths = ['ims',
-                 'ims/' + self.plot_folder
-                 ]
-        for i in paths:
-            if not os.path.exists(i):
-                os.makedirs(i)
-
-        # Load the data
-        # time_series = generate_arp_data(5, 600, 500)
-        time_series = generate_noise(data_samples)
-        x_train, y_train = split_sequence(time_series, self.window_size, self.forecasting_horizon)
-
-        half_batch = int(batch_size / 2)
-        forecast_mse = np.zeros(epochs)
-        kl_divergence = np.zeros(epochs)
-
-        for epoch in range(epochs):
-
-            # ---------------------
-            #  Train Discriminator
-            # ---------------------
-            for d_epochs in range(self.discriminator_epochs):
-                # Select a random half batch of images
-                idx = np.random.randint(0, x_train.shape[0], half_batch)
-                historic_time_series = x_train[idx]
-                future_time_series = y_train[idx]
-
-                noise = self._generate_noise(half_batch)  # Normalisere til 1
-
-                # Generate a half batch of new images
-                gen_forecasts = self.generator.predict([historic_time_series, noise])
-
-                # Train the discriminator
-                d_loss_real = self.discriminator.train_on_batch([historic_time_series, future_time_series],
-                                                                self._get_labels(batch_size=half_batch, real=True))
-                d_loss_fake = self.discriminator.train_on_batch([historic_time_series,
-                                                                 tf.keras.backend.expand_dims(gen_forecasts, axis=-1)],
-                                                                self._get_labels(batch_size=half_batch, real=False))
-                d_loss = 0.5 * np.add(d_loss_real, d_loss_fake)
-
-            # ---------------------
-            #  Train Generator
-            # ---------------------
-
-            noise = self._generate_noise(batch_size)
-
-            # The generator wants the discriminator to label the generated samples
-            # as valid (ones)
-            valid_y = np.array([1] * batch_size)
-
-            idx = np.random.randint(0, x_train.shape[0], batch_size)
-            historic_time_series = x_train[idx]
-            # Train the generator
-            g_loss = self.combined.train_on_batch([historic_time_series, noise], valid_y)
-
-            # Measure forecast MSE of generator
-            forecast_mse[epoch] = mean_squared_error(future_time_series[:, :, 0], gen_forecasts)
-            # kl_divergence[epoch] = sum(self.kl_divergence(future_time_series[:, i, 0], gen_forecasts[:, i])
-            #                           for i in range(self.forecasting_horizon))/self.forecasting_horizon
-
-            # Plot the progress
-            print("%d [D loss: %f, acc.: %.2f%%] [G loss: %f, forecast mse: %f]" %
-                  (epoch, d_loss[0], 100 * d_loss[1], g_loss, forecast_mse[epoch]))
-            # print("KL-divergence: ", kl_divergence[epoch])
-
-            if epoch % self.plot_rate == 0:
-                self.plot_distributions(future_time_series[:, :, 0], gen_forecasts,
-                                        f'ims/' + self.plot_folder + f'/epoch{epoch:03d}.png')
-
-        plt.figure()
-        plt.plot(np.linspace(1, epochs, epochs), forecast_mse, label='Training loss generator')
-        plt.legend()
-        plt.show()
-
     def fit(self, x, y, epochs=1, batch_size=32, verbose=1):
         half_batch = int(batch_size / 2)
         forecast_mse = np.zeros(epochs)
@@ -274,63 +187,3 @@ class RecurrentConvDSGAN(GAN):
                 self.plot_distributions(future_time_series[:, :, 0], gen_forecasts,
                                         f'ims/' + self.plot_folder + f'/epoch{epoch:03d}.png')
         return {'mse': forecast_mse, 'G_loss': G_loss, 'D_loss': D_loss, 'Accuracy': 100 * d_loss[1]}
-
-    def forecast(self, x):
-        forecast = np.zeros([x.shape[0], self.mc_forward_passes, self.output_size])
-        for i in tqdm(range(x.shape[0])):
-            generator_noise = self._generate_noise(batch_size=self.mc_forward_passes)
-            x_input = np.vstack([np.expand_dims(x[i], axis=0)] * self.mc_forward_passes)
-            forecast[i] = self.generator.predict([x_input, generator_noise])
-        """
-        forecast = np.zeros([x.shape[0]*self.mc_forward_passes, self.forecasting_horizon])
-        generator_noise = self._generate_noise(batch_size=self.mc_forward_passes*x.shape[0])
-        x_input = np.vstack([np.expand_dims(x, axis=0)] * self.mc_forward_passes)
-        forecast = self.generator.predict([x_input.reshape([x_input.shape[0]*x_input.shape[1], x_input.shape[2], x_input.shape[3]]), generator_noise])
-        forecast = forecast.reshape([x.shape[0], self.mc_forward_passes, self.output_size])
-        """
-        return forecast.mean(axis=1)
-
-    def recurrent_forecast(self, time_series):
-        time_series = np.vstack([time_series] * self.mc_forward_passes)
-        x_input = np.zeros([self.mc_forward_passes, self.window_size + self.forecasting_horizon, 1])
-        x_input[:, :self.window_size] = time_series
-        for i in range(self.forecasting_horizon):
-            generator_noise = self._generate_noise(batch_size=self.mc_forward_passes)
-            x_input[:, self.window_size+i] = self.generator.predict([x_input[:, i:self.window_size+i], generator_noise])
-        return x_input[:, -self.forecasting_horizon:].transpose()[0]
-
-    def monte_carlo_forecast(self, data, steps=1, plot=False):
-        time_series = np.expand_dims(data, axis=0)
-        forecast = np.zeros([steps, self.forecasting_horizon, self.mc_forward_passes])
-        for i in tqdm(range(steps)):
-            #for j in range(mc_forward_passes):
-                #generator_noise = self._generate_noise(batch_size=1)
-                #forecast[i, :, j] = self.generator.predict([time_series[:, i:self.window_size + i], generator_noise])[0]
-                #forecast[i, :, j] = self.recurrent_forecast(time_series[:, i:self.window_size + i])
-            if self.recurrent_forecasting:
-                forecast[i] = self.recurrent_forecast(time_series[:, i:self.window_size + i])
-            else:
-                generator_noise = self._generate_noise(batch_size=self.mc_forward_passes)
-                x_input = np.vstack([time_series[:, i:self.window_size + i]]*self.mc_forward_passes)
-                forecast[i] = self.generator.predict([x_input, generator_noise]).transpose()
-        if plot:
-            plt.figure()
-            plt.plot(np.linspace(1, len(data[0]), len(data[0])), data[0], label='Real data')
-            plt.plot(np.linspace(self.window_size, self.window_size + steps, steps), forecast.mean(axis=2)[:, 0],
-                     label='Forecasted data')
-            plt.legend()
-            plt.show()
-            print('Forecast error:',
-                  mean_squared_error(time_series[0, -len(forecast):], forecast.mean(axis=2)[:, 0]))
-            print('Forecast standard deviation', np.mean(forecast.std(axis=2)[:, 0], axis=0))
-            self.plot_distributions(real_samples=generate_noise(self.mc_forward_passes), fake_samples=forecast[0, 0])
-        return forecast
-
-
-if __name__ == '__main__':
-    gan = RecurrentConvDSGAN()
-    gan.build_gan()
-    gan.train(epochs=500, batch_size=512, discriminator_epochs=1)
-    gan.monte_carlo_forecast(data=generate_noise(gan.window_size + gan.forecasting_horizon),
-                             steps=1, plot=True)
-
