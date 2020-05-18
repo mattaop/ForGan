@@ -72,6 +72,7 @@ def get_gan(cfg):
             print('Model GAN has no loss:', loss)
             AttributeError()
     elif model_name.lower() == 'rnn':
+        print('Model: RNN')
         model = RNN.RNN(cfg)
     else:
         ImportError('Model ' + model_name + 'not found')

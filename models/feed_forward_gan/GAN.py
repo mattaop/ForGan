@@ -160,25 +160,19 @@ class GAN:
             # Train the generator
             g_loss = self.combined.train_on_batch(noise,
                                                   self._get_labels(batch_size=batch_size, real=True))
-
             # Measure forecast MSE of generator
-            try:
-                forecast_mse[epoch] = mean_squared_error(real_samples, gen_forecasts)
-            except ValueError:
-                print(gen_forecasts)
-                forecast_mse[epoch] = 0
-
-
-
-            #kl_divergence[epoch] = self.kl_divergence(real_samples, gen_forecasts)
-            #print("KL-divergence: ", kl_divergence[epoch])
+            forecast_mse[epoch] = mean_squared_error(real_samples, gen_forecasts)
 
             if epoch % self.plot_rate == 0:
                 # Plot the progress
                 print("%d [D loss: %f, acc.: %.2f%%] [G loss: %f, forecast mse: %f]" %
                       (epoch, d_loss[0], 100 * (d_loss[1]), g_loss, forecast_mse[epoch]))
-                self.plot_distributions(real_samples, gen_forecasts,
-                                        f'ims/' + self.plot_folder + f'/plot.{epoch:03d}.png')
+                noise = self._generate_noise(data_samples)
+                self.plot_distributions(data, self.generator.predict(noise),
+                                        f'ims/' + self.plot_folder + f'/epoch{epoch:03d}.png')
+        noise = self._generate_noise(data_samples)
+        self.plot_distributions(data, self.generator.predict(noise),
+                                f'ims/' + self.plot_folder + f'/epoch{epochs:03d}.png')
         """
         plt.figure()
         plt.plot(np.linspace(1, epochs, epochs), forecast_mse, label='Training loss generator')
@@ -245,6 +239,8 @@ class GAN:
         # print('Plot directory: ', filename)
         sns.kdeplot(fake_samples.flatten(), color='red', alpha=0.6, label='GAN', shade=True)
         sns.kdeplot(real_samples.flatten(), color='blue', alpha=0.6, label='Real', shade=True)
+        plt.xlabel('Sample value')
+        plt.ylabel('Density')
         plt.legend()
         if filename is None:
             plt.show()
@@ -308,7 +304,7 @@ if __name__ == '__main__':
     coverage_80_PI_1, coverage_95_PI_1 = [], []
     coverage_80_PI_2, coverage_95_PI_2 = [], []
     kl_div, js_div, uncertainty_list = [], [], []
-    for i in range(10):
+    for i in range(1):
         gan = GAN(config['gan'])
         gan.build_model()
         gan.train(epochs=2000, batch_size=32)

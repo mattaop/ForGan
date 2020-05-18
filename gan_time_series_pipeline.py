@@ -48,7 +48,7 @@ def configure_model(cfg):
 
 def load_data(cfg, window_size):
     if cfg['data_source'].lower() == 'sine':
-        data = generate_sine_data(num_points=5000)
+        data = generate_sine_data(num_points=1000)
     elif cfg['data_source'].lower() == 'oslo':
         data = load_oslo_temperature()
     elif cfg['data_source'].lower() == 'australia':
@@ -125,7 +125,7 @@ def train_gan(gan, data, epochs, batch_size=128, verbose=1):
 
 
 def test_model(gan, data, validation_mse, plot=True):
-    forecast = gan.monte_carlo_forecast(data, steps=int(len(data)-gan.window_size))  # steps x horizon x mc_forward_passes
+    forecast = gan.monte_carlo_forecast(data, steps=int(len(data)-gan.window_size), plot=True)  # steps x horizon x mc_forward_passes
     forecast_mean = forecast.mean(axis=-1)
     forecast_std = forecast.std(axis=-1)
     forecast_var = forecast.var(axis=-1)
@@ -190,7 +190,7 @@ def test_model(gan, data, validation_mse, plot=True):
                                                 forecast_horizon=gan.forecasting_horizon),
                      y2_label='95% PI coverage',
                      title='Prediction Interval Coverage', y_label='Coverage')
-    return forecast_mse, forecast_smape, coverage_80_1, coverage_95_1, coverage_80_2, coverage_95_2, width_80_1, width_95_1, width_80_2, width_95_2, forecast_std
+    return forecast_mse, forecast_smape, coverage_80_1, coverage_95_1, coverage_80_2, coverage_95_2, width_80_1, width_95_1, width_80_2, width_95_2, forecast_std.mean(axis=0)
 
 
 def pipeline():
@@ -204,7 +204,7 @@ def pipeline():
         trained_gan, validation_mse = train_gan(gan=gan, data=train, epochs=cfg['gan']['epochs'],
                                                 batch_size=cfg['gan']['batch_size'], verbose=0)
         forecast_mse, forecast_smape, coverage_80_1, coverage_95_1, coverage_80_2, coverage_95_2, width_80_1, \
-            width_95_1, width_80_2, width_95_2, forecast_std = test_model(gan=trained_gan, data=test, validation_mse=validation_mse, plot=False)
+            width_95_1, width_80_2, width_95_2, forecast_std = test_model(gan=trained_gan, data=test, validation_mse=validation_mse, plot=True)
         forecast_mse_list.append(forecast_mse), forecast_smape_list.append(forecast_smape), validation_mse_list.append(validation_mse)
         forecast_std_list.append(forecast_std)
         coverage_80_1_list.append(coverage_80_1), coverage_95_1_list.append(coverage_95_1)
@@ -212,13 +212,20 @@ def pipeline():
         width_80_1_list.append(width_80_1), width_95_1_list.append(width_95_1)
         width_80_2_list.append(width_80_2), width_95_2_list.append(width_95_2)
 
+    print('========================================================'
+          '\n================ Point Forecast Metrics ================'
+          '\n========================================================')
     print('Mean validation MSE:', np.mean(np.mean(validation_mse_list, axis=0)))
     print('Mean forecast MSE:', np.mean(np.mean(forecast_mse_list, axis=0)))
     print('Forecast MSE:', np.mean(np.array(forecast_mse_list), axis=0))
     print('Mean forecast SMAPE:', np.mean(np.mean(forecast_smape_list, axis=0)))
     print('Forecast SMAPE:', np.mean(np.array(forecast_smape_list), axis=0))
+
+    print('========================================================'
+          '\n================== Model Uncertainty ==================='
+          '\n========================================================')
     print('Estimated Standard deviation:', np.mean(np.mean(forecast_std_list, axis=0)),
-          np.std(np.mean(forecast_std_list, axis=-1), axis=0))
+          np.mean(forecast_std_list, axis=0))
     print('80%-prediction interval coverage - Mean:', np.mean(np.mean(coverage_80_1_list, axis=0)),
           ', width:', np.mean(width_80_1_list),
           '\n Forecast horizon:', np.mean(np.array(coverage_80_1_list), axis=0))
@@ -226,6 +233,12 @@ def pipeline():
           ', width:', np.mean(width_95_1_list),
           '\n Forecast horizon:', np.mean(np.array(coverage_95_1_list), axis=0))
 
+    print('========================================================'
+          '\n========== Model Uncertainty + Validation MSE ========== '
+          '\n========================================================')
+    print('Estimated Standard deviation:', np.mean(np.mean(np.sqrt(np.array(forecast_std_list)**2
+                                                                   + np.array(validation_mse_list)), axis=0)),
+          np.mean(np.sqrt(np.array(forecast_std_list)**2 + np.array(validation_mse_list)), axis=0))
     print('80%-prediction interval coverage - Mean:', np.mean(np.mean(coverage_80_2_list, axis=0)),
           ', width:', np.mean(width_80_2_list),
           '\n Forecast horizon:', np.mean(np.array(coverage_80_2_list), axis=0))

@@ -276,10 +276,6 @@ class RecurrentGAN(GAN):
         time_series = np.expand_dims(data, axis=0)
         forecast = np.zeros([steps, self.forecasting_horizon, self.mc_forward_passes])
         for i in tqdm(range(steps)):
-            #for j in range(mc_forward_passes):
-                #generator_noise = self._generate_noise(batch_size=1)
-                #forecast[i, :, j] = self.generator.predict([time_series[:, i:self.window_size + i], generator_noise])[0]
-                #forecast[i, :, j] = self.recurrent_forecast(time_series[:, i:self.window_size + i])
             if self.recurrent_forecasting:
                 forecast[i] = self.recurrent_forecast(time_series[:, i:self.window_size + i])
             else:
@@ -288,15 +284,26 @@ class RecurrentGAN(GAN):
                 forecast[i] = self.generator.predict([x_input, generator_noise]).transpose()
         if plot:
             plt.figure()
-            plt.plot(np.linspace(1, len(data[0]), len(data[0])), data[0], label='Real data')
-            plt.plot(np.linspace(self.window_size, self.window_size + steps, steps), forecast.mean(axis=2)[:, 0],
-                     label='Forecasted data')
+            plt.plot(np.linspace(1, self.window_size + self.forecasting_horizon,
+                                 self.window_size + self.forecasting_horizon),
+                     data[:self.window_size + self.forecasting_horizon, 0], label='Real data')
+            plt.plot(np.linspace(self.window_size+1, self.window_size + self.forecasting_horizon,
+                                 self.forecasting_horizon),
+                     forecast.mean(axis=2)[0, :],
+                     label='Forecast data')
+            plt.fill_between(np.linspace(self.window_size+1, self.window_size + self.forecasting_horizon,
+                                         self.forecasting_horizon),
+                             forecast.mean(axis=-1)[0, :] - 1.28 * forecast.std(axis=-1)[0, :],
+                             forecast.mean(axis=-1)[0, :] + 1.28 * forecast.std(axis=-1)[0, :],
+                             alpha=0.5, edgecolor='#CC4F1B', facecolor='#FF9848', label='80%-PI')
+            plt.fill_between(np.linspace(self.window_size+1, self.window_size + self.forecasting_horizon,
+                                         self.forecasting_horizon),
+                             forecast.mean(axis=-1)[0, :] - 1.96 * forecast.std(axis=-1)[0, :],
+                             forecast.mean(axis=-1)[0, :] + 1.96 * forecast.std(axis=-1)[0, :],
+                             alpha=0.2, edgecolor='#CC4F1B', facecolor='#FF9848', label='95%-PI')
+
             plt.legend()
             plt.show()
-            print('Forecast error:',
-                  mean_squared_error(time_series[0, -len(forecast):], forecast.mean(axis=2)[:, 0]))
-            print('Forecast standard deviation', np.mean(forecast.std(axis=2)[:, 0], axis=0))
-            self.plot_distributions(real_samples=generate_noise(self.mc_forward_passes), fake_samples=forecast[0, 0])
         return forecast
 
 
@@ -305,7 +312,7 @@ if __name__ == '__main__':
     coverage_80_PI_1, coverage_95_PI_1 = [], []
     coverage_80_PI_2, coverage_95_PI_2 = [], []
     kl_div, js_div, uncertainty_list = [], [], []
-    for i in range(1):
+    for _ in range(1):
         gan = RecurrentGAN(config['gan'])
         gan.build_model()
         gan.train(epochs=200, batch_size=32)

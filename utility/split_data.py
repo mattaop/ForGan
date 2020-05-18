@@ -2,13 +2,13 @@ import numpy as np
 
 
 # split a univariate sequence into samples
-def split_sequence(sequence, sequence_length, forecast_hoizon, num_features=1):
-    x = np.zeros([len(sequence)-sequence_length-forecast_hoizon + 1, sequence_length, 1])
-    y = np.zeros([len(sequence)-sequence_length-forecast_hoizon + 1, forecast_hoizon, 1])
+def split_sequence(sequence, sequence_length, forecast_horizon):
+    x = np.zeros([len(sequence)-sequence_length-forecast_horizon + 1, sequence_length, 1])
+    y = np.zeros([len(sequence)-sequence_length-forecast_horizon + 1, forecast_horizon, 1])
     for i in range(len(sequence)):
         # find the end of this pattern
         end_ix = i + sequence_length
-        out_end_ix = end_ix + forecast_hoizon
+        out_end_ix = end_ix + forecast_horizon
         # check if we are beyond the sequence
         if out_end_ix > len(sequence):
             break

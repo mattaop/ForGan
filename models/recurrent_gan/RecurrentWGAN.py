@@ -20,7 +20,7 @@ class RecurrentWGAN(RecurrentGAN, WGAN):
     def build_discriminator(self):
 
         historic_shape = (self.window_size, 1)
-        future_shape = (self.forecasting_horizon, 1)
+        future_shape = (self.output_size, 1)
 
         historic_inp = Input(shape=historic_shape)
         future_inp = Input(shape=future_shape)
@@ -30,8 +30,8 @@ class RecurrentWGAN(RecurrentGAN, WGAN):
         # define the constraint
         const = ClipConstraint(0.1)
 
-        x = GRU(64, return_sequences=False, kernel_constraint=const)(x)
-        x = BatchNormalization()(x)
+        x = SimpleRNN(64, return_sequences=False, kernel_constraint=const)(x)
+        # x = BatchNormalization()(x)
         # x = LeakyReLU(alpha=0.2)(x)
         x = Dense(64, kernel_constraint=const)(x)
         x = LeakyReLU(alpha=0.1)(x)

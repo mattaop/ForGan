@@ -1,18 +1,18 @@
 gan:
-
   model_name: RecurrentGAN # RNN, GAN, ConvGAN, RecurrentGAN, RecurrentConvGAN, RecurrentConvDSGAN
-  epochs: 2000
-  batch_size: 32
   loss_function: kl # kl, w, ds
-  learning_rate: 0.0005
+
+  epochs: 1000
+  batch_size: 32
+  learning_rate: 0.001
   discriminator_epochs: 3
 
-  noise_vector_size: 50
+  noise_vector_size: 100
 
   window_size: 24
   forecast_horizon: 12
   recurrent_forecasting: True # True, False
-  mc_forward_passes: 5000
+  mc_forward_passes: 1000
   plot_rate: 100
 
 data:

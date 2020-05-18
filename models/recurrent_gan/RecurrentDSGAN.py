@@ -14,9 +14,9 @@ class RecurrentDSGAN(RecurrentGAN):
         self.plot_folder = 'RecurrentConvDSGAN'
 
         self.optimizer = Adam(cfg['learning_rate'], 0.5)
-        self.alpha = 0.2
-        self.beta = 0.2
-        self.tau = 5
+        self.alpha = 0.1
+        self.beta = 0.1
+        self.tau = 2
         loss = DiversitySensitiveLoss(self.alpha, self.beta, self.tau, self.discriminator_loss)
         self.generator_loss = loss.dummy_loss
         self.combined_loss = loss.loss_function
