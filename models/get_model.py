@@ -1,52 +1,78 @@
-from models.feed_forward_gan import GAN, WGAN
+from models.feed_forward_gan import GAN, WGAN, DSGAN
 from models.conv_gan import ConvGAN, ConvWGAN
-from models.recurrent_gan import RecurrentGAN, RecurrentWGAN, RecurrentConvGAN, RecurrentConvWGAN, RecurrentConvDSGAN
+from models.recurrent_gan import RecurrentGAN, RecurrentWGAN, RecurrentDSGAN, RecurrentConvGAN, RecurrentConvWGAN, \
+    RecurrentConvDSGAN
 from models.baseline_models import RNN
-from models.hybrid_gan import ESWGAN, ESRNNWGAN
+from models.hybrid_gan import ESWGAN, ESRecurrentWGAN
 
 
 def get_gan(cfg):
     model_name = cfg['model_name']
-    if model_name.lower() == 'gan' and not cfg['wasserstein_loss']:
-        print('Model: GAN')
-        model = GAN.GAN(cfg)
-    elif model_name.lower() == 'gan' and cfg['wasserstein_loss']:
-        print('Model: WGAN')
-        model = WGAN.WGAN(cfg)
-    elif model_name.lower() == 'convgan' and not cfg['wasserstein_loss']:
-        print('Model: ConvGAN')
-        model = ConvGAN.ConvGAN(cfg)
-    elif model_name.lower() == 'convgan' and cfg['wasserstein_loss']:
-        print('Model: ConvWGAN')
-        model = ConvWGAN.ConvWGAN(cfg)
-    elif model_name.lower() == 'recurrentgan' and not cfg['wasserstein_loss']:
-        print('Model: RecurrentGAN')
-        model = RecurrentGAN.RecurrentGAN(cfg)
-    elif model_name.lower() == 'recurrentgan' and cfg['wasserstein_loss']:
-        print('Model: RecurrentWGAN')
-        model = RecurrentWGAN.RecurrentWGAN(cfg)
-    elif model_name.lower() == 'recurrentconvgan' and not cfg['wasserstein_loss']:
-        print('Model: RecurrentConvGAN')
-        model = RecurrentConvGAN.RecurrentConvGAN(cfg)
-    elif model_name.lower() == 'recurrentconvgan' and cfg['wasserstein_loss']:
-        print('Model: RecurrentConvWGAN')
-        model = RecurrentConvWGAN.RecurrentConvWGAN(cfg)
-    elif model_name.lower() == 'esgan' and cfg['wasserstein_loss']:
-        print('Model: ESWGAN')
-        model = ESWGAN.ESWGAN(cfg)
-    elif model_name.lower() == 'esrnngan' and cfg['wasserstein_loss']:
-        print('Model: ES RNN GAN')
-        model = ESRNNWGAN.ESRNNWGAN(cfg)
-    elif model_name.lower() == 'recurrentconvdsgan':
-        print('Model: RecurrentConvDSGAN')
-        model = RecurrentConvDSGAN.RecurrentConvDSGAN(cfg)
+    loss = cfg['loss_function']
+    model = None
+    if model_name.lower() == 'gan':
+        if loss.lower() in ['kl', 'kl-div', 'kl-divergence', 'kl divergence', None]:
+            print('Model: GAN, Loss: Binary Crossentropy loss')
+            model = GAN.GAN(cfg)
+        elif loss.lower() in ['wasserstein', 'w']:
+            print('Model: GAN, Loss: Wasserstein loss')
+            model = WGAN.WGAN(cfg)
+        elif loss.lower() in ['diversity-sensitive', 'diversity sensitive', 'ds']:
+            print('Model: GAN, Loss: Diversity-Sensitive loss')
+            model = DSGAN.DSGAN(cfg)
+        else:
+            print('Model GAN has no loss:', loss)
+            AttributeError()
+    elif model_name.lower() == 'convgan':
+        if loss.lower() in ['kl', 'kl-div', 'kl-divergence', 'kl divergence', None]:
+            print('Model: ConvGAN, Loss: Binary Crossentropy')
+            model = ConvGAN.ConvGAN(cfg)
+        elif loss.lower() in ['wasserstein', 'w']:
+            print('Model: ConvGAN, Loss: Wasserstein loss')
+            model = ConvWGAN.ConvWGAN(cfg)
+        else:
+            print('Model GAN has no loss:', loss)
+            AttributeError()
+
+    elif model_name.lower() == 'recurrentgan':
+        if loss.lower() in ['kl', 'kl-div', 'kl-divergence', 'kl divergence', None]:
+            print('Model: RecurrentGAN, Loss: Binary Crossentropy loss')
+            model = RecurrentGAN.RecurrentGAN(cfg)
+        elif loss.lower() in ['wasserstein', 'w']:
+            print('Model: RecurrentGAN, Loss: Wasserstein loss')
+            model = RecurrentWGAN.RecurrentWGAN(cfg)
+        elif loss.lower() in ['diversity-sensitive', 'diversity sensitive', 'ds']:
+            print('Model: RecurrentGAN, Loss: Diversity-Sensitive loss')
+            model = RecurrentDSGAN.RecurrentDSGAN(cfg)
+        else:
+            print('Model GAN has no loss:', loss)
+            AttributeError()
+    elif model_name.lower() == 'recurrentconvgan':
+        if loss.lower() in ['kl', 'kl-div', 'kl-divergence', 'kl divergence', None]:
+            print('Model: RecurrentConvGAN, Loss: Binary Crossentropy loss')
+            model = RecurrentConvGAN.RecurrentConvGAN(cfg)
+        elif loss.lower() in ['wasserstein', 'w']:
+            print('Model: RecurrentGAN, Loss: Wasserstein loss')
+            model = RecurrentConvWGAN.RecurrentConvWGAN(cfg)
+        elif loss.lower() in ['diversity-sensitive', 'diversity sensitive', 'ds']:
+            print('Model: RecurrentGAN, Loss: Diversity-Sensitive loss')
+            model = RecurrentConvDSGAN.RecurrentConvDSGAN(cfg)
+        else:
+            print('Model GAN has no loss:', loss)
+            AttributeError()
+    elif model_name.lower() == 'esgan':
+        if loss.lower() in ['kl', 'kl-div', 'kl-divergence', 'kl divergence', None]:
+            print('Model: ES-WGAN, Loss: Binary Crossentropy loss')
+            model = ESWGAN.ESWGAN(cfg)
+        elif loss.lower() in ['wasserstein', 'w']:
+            print('Model: ES-RecurrentWGAN, Loss: Wasserstein loss')
+            model = ESRecurrentWGAN.ESRecurrentWGAN(cfg)
+
+        else:
+            print('Model GAN has no loss:', loss)
+            AttributeError()
     elif model_name.lower() == 'rnn':
         model = RNN.RNN(cfg)
     else:
         ImportError('Model ' + model_name + 'not found')
-        model = None
     return model
-
-
-def get_model(model_name: str = 'rnn'):
-    return RNN.RNN()

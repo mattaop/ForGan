@@ -10,7 +10,7 @@ def load_raw_data(file_name=''):
 
 def load_oslo_temperature():
     path = get_path()
-    df = pd.read_csv(path['project path'] + 'data//OsloTemperature.csv',
+    df = pd.read_csv(path['project path'] + 'data//data_files//OsloTemperature.csv',
                      header=0, sep=';', index_col=0)
     df.set_index('time', inplace=True)
     df.drop(columns=['station', 'id', 'max(air_temperature P1M)', 'min(air_temperature P1M)'], inplace=True)
@@ -28,7 +28,7 @@ def load_oslo_temperature():
 
 def load_australia_temperature():
     path = get_path()
-    df = pd.read_csv(path['project path'] + 'data//daily-min-temperatures.csv')
+    df = pd.read_csv(path['project path'] + 'data//data_files//daily-min-temperatures.csv')
     df.set_index('Date', inplace=True)
     df.dropna(how='any', inplace=True)
     idx = pd.date_range('1981-01-01', freq='D', periods=3650)

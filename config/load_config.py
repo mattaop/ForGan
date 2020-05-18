@@ -10,6 +10,6 @@ def load_config_file(file, print_config=False):
 
 
 def get_path():
-    with open('C:\\Users\\mathi\\PycharmProjects\\gan\\config\\paths.yml', 'r') as ymlfile:
+    with open('config\\paths.yml', 'r') as ymlfile:
         paths = yaml.load(ymlfile)
     return paths

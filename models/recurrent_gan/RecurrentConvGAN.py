@@ -28,7 +28,7 @@ class RecurrentConvGAN(RecurrentGAN):
 
         x = Concatenate(axis=1)([historic_inp, future_inp])
 
-        x = Conv1D(16, kernel_size=4)(x)
+        x = Conv1D(32, kernel_size=4)(x)
         x = LeakyReLU(alpha=0.1)(x)
         # x = BatchNormalization()(x)
         # x = Dropout(0.2)(x)

@@ -4,22 +4,15 @@ from keras.layers import *
 from keras.optimizers import RMSprop, Adam
 from keras import backend
 
-from models.recurrent_gan.RecurrentConvGAN import RecurrentConvGAN
+from models.recurrent_gan.RecurrentWGAN import RecurrentWGAN
 from data.generate_noise import generate_noise
 from utility.ClipConstraint import ClipConstraint
 
 
-class RecurrentConvWGAN(RecurrentConvGAN):
+class RecurrentConvWGAN(RecurrentWGAN):
     def __init__(self, cfg):
-        RecurrentConvGAN.__init__(self, cfg)
+        RecurrentWGAN.__init__(self, cfg)
         self.plot_folder = 'RecurrentConvWGAN'
-        self.noise_vector_size = cfg['noise_vector_size']  # Try larger vector
-
-        self.optimizer = RMSprop(lr=cfg['learning_rate'])
-        self.loss_function = self.wasserstein_loss
-
-    def wasserstein_loss(self, y_true, y_pred):
-        return backend.mean(y_true * y_pred)
 
     def build_generator(self):
 
@@ -75,9 +68,3 @@ class RecurrentConvWGAN(RecurrentConvGAN):
         model.summary()
 
         return model
-
-    def _get_labels(self, batch_size, real=True):
-        if real:
-            return np.ones((batch_size, 1))
-        else:
-            return -np.ones((batch_size, 1))

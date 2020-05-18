@@ -1,9 +1,9 @@
 gan:
 
-  model_name: RecurrentGAN # GAN, ConvGAN, RecurrentGAN, RecurrentConvGAN, RNN, RecurrentConvDSGAN
+  model_name: RecurrentGAN # RNN, GAN, ConvGAN, RecurrentGAN, RecurrentConvGAN, RecurrentConvDSGAN
   epochs: 2000
   batch_size: 32
-  wasserstein_loss: False # True, False
+  loss_function: kl # kl, w, ds
   learning_rate: 0.0005
   discriminator_epochs: 3
 
@@ -16,7 +16,7 @@ gan:
   plot_rate: 100
 
 data:
-  data_source: sine # sine, oslo, australia
+  data_source: oslo # sine, oslo, australia
   test_split: 0.2
 
 cross_validation_setup:

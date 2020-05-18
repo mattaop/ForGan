@@ -15,9 +15,8 @@ from utility.ClipConstraint import ClipConstraint
 from utility.split_data import split_sequence
 
 
-class ESWGAN(GAN):
+class ES:
     def __init__(self, cfg):
-        GAN.__init__(self, cfg)
         self.plot_rate = cfg['plot_rate']
         self.plot_folder = 'ES'
         self.window_size = cfg['window_size']
@@ -105,14 +104,8 @@ class ESWGAN(GAN):
         es_forecasts = self.exponential_smoothing.forecast(steps=x.shape[0])
         return es_forecasts
 
-    def recurrent_forecast(self, time_series):
-        time_series = np.vstack([time_series] * self.mc_forward_passes)
-        x_input = np.zeros([self.mc_forward_passes, self.window_size + self.forecasting_horizon, 1])
-        x_input[:, :self.window_size] = time_series
-        for i in range(self.forecasting_horizon):
-            generator_noise = self._generate_noise(batch_size=self.mc_forward_passes)
-            x_input[:, self.window_size+i] = self.generator.predict([x_input[:, i:self.window_size+i, 0], generator_noise])
-        return x_input[:, -self.forecasting_horizon:].transpose()[0]
+    def recurrent_forecast(self, x):
+        return self.forecast(x)
 
     def monte_carlo_forecast(self, data, steps=1, plot=False):
         # forecast ES

@@ -56,7 +56,6 @@ def load_data(cfg, window_size):
 
     else:
         return None
-    print('Data shape', data.shape)
     train = data[:-int(len(data)*cfg['test_split'])]
     test = data[-int(len(data)*cfg['test_split']+window_size):]
     train, test = scale_data(train, test)
@@ -130,9 +129,7 @@ def test_model(gan, data, validation_mse, plot=True):
     forecast_mean = forecast.mean(axis=-1)
     forecast_std = forecast.std(axis=-1)
     forecast_var = forecast.var(axis=-1)
-    # print('Forecast std', forecast_std)
 
-    # print('Mutual information:', normalized_mutual_info_score(forecast_mean[:, 0], data[gan.window_size:, 0]))
     total_uncertainty = np.sqrt(forecast_var + validation_mse)
     if plot:
         x_pred = np.linspace(gan.window_size+1, len(data), len(data)-gan.window_size)
@@ -145,18 +142,10 @@ def test_model(gan, data, validation_mse, plot=True):
                          alpha=0.2, edgecolor='#CC4F1B', facecolor='#FF9848', label='95%-PI')
         plt.legend()
         plt.show()
-    # print('Mean validation MSE:', validation_mse.mean())
     forecast_mse = sliding_window_mse(forecast_mean, data[gan.window_size:], gan.forecasting_horizon)
-    # print('Mean forecast MSE:', forecast_mse.mean())
-    # print('Forecast MSE:', forecast_mse)
-    forecast_smape = sliding_window_smape(forecast_mean, data[gan.window_size:], gan.forecasting_horizon)
-    # print('Mean forecast SMAPE:', forecast_smape.mean())
-    # print('Forecast SMAPE:', forecast_smape)
 
-    # print('Mean validation MSE:', validation_mse.mean())
-    # print('Validation MSE:', validation_mse)
-    # print('Mean forecast standard deviation:', forecast_std.mean(axis=0))
-    # print('Mean total forecast standard deviation:', total_uncertainty.mean(axis=0))
+    forecast_smape = sliding_window_smape(forecast_mean, data[gan.window_size:], gan.forecasting_horizon)
+
     coverage_80_1 = sliding_window_coverage(actual_values=data[gan.window_size:],
                                             upper_limits=np.quantile(forecast, q=0.9, axis=-1),
                                             lower_limits=np.quantile(forecast, q=0.1, axis=-1),
@@ -228,7 +217,8 @@ def pipeline():
     print('Forecast MSE:', np.mean(np.array(forecast_mse_list), axis=0))
     print('Mean forecast SMAPE:', np.mean(np.mean(forecast_smape_list, axis=0)))
     print('Forecast SMAPE:', np.mean(np.array(forecast_smape_list), axis=0))
-    print('Estimated Standard deviation:', np.mean(forecast_std_list, axis=0), np.std(forecast_std_list, axis=0))
+    print('Estimated Standard deviation:', np.mean(np.mean(forecast_std_list, axis=0)),
+          np.std(np.mean(forecast_std_list, axis=-1), axis=0))
     print('80%-prediction interval coverage - Mean:', np.mean(np.mean(coverage_80_1_list, axis=0)),
           ', width:', np.mean(width_80_1_list),
           '\n Forecast horizon:', np.mean(np.array(coverage_80_1_list), axis=0))

@@ -16,7 +16,7 @@ from utility.ClipConstraint import ClipConstraint
 from utility.split_data import split_sequence
 
 
-class ESRNNWGAN(GAN):
+class ESRecurrentWGAN(GAN):
     def __init__(self, cfg):
         GAN.__init__(self, cfg)
         self.plot_rate = cfg['plot_rate']
