@@ -167,14 +167,17 @@ def test_model(gan, data, validation_mse, plot=True):
     width_80_2 = 2*1.28*total_uncertainty
     width_95_2 = 2*1.96*total_uncertainty
     if plot:
+        print('Width 80:', np.mean(width_80_1), ', width 95:', np.mean(width_95_1))
+
         print('80%-prediction interval coverage - Mean:', coverage_80_1.mean(),
               '\n Forecast horizon:', coverage_80_1)
         print('95%-prediction interval coverage - Mean:', coverage_95_1.mean(),
               '\n Forecast horizon:', coverage_95_1)
 
-        print('80%-prediction interval coverage - Mean:',coverage_80_2.mean(),
+        print('Width 80:', np.mean(width_80_2), ', width 95:', np.mean(width_95_2))
+        print('80%-prediction interval coverage - Mean:', coverage_80_2.mean(),
               '\n Forecast horizon:', coverage_80_2)
-        print('95%-prediction interval coverage - Mean:',coverage_95_2.mean(),
+        print('95%-prediction interval coverage - Mean:', coverage_95_2.mean(),
               '\n Forecast horizon:', coverage_95_2)
 
         plot_results(sliding_window_mse(forecast_mean, data[gan.window_size:], gan.forecasting_horizon),
@@ -203,6 +206,7 @@ def pipeline():
         train, test = load_data(cfg=cfg['data'], window_size=gan.window_size)
         trained_gan, validation_mse = train_gan(gan=gan, data=train, epochs=cfg['gan']['epochs'],
                                                 batch_size=cfg['gan']['batch_size'], verbose=0)
+        test_model(gan=trained_gan, data=train, validation_mse=validation_mse, plot=True)
         forecast_mse, forecast_smape, coverage_80_1, coverage_95_1, coverage_80_2, coverage_95_2, width_80_1, \
             width_95_1, width_80_2, width_95_2, forecast_std = test_model(gan=trained_gan, data=test, validation_mse=validation_mse, plot=True)
         forecast_mse_list.append(forecast_mse), forecast_smape_list.append(forecast_smape), validation_mse_list.append(validation_mse)

@@ -101,7 +101,7 @@ class RecurrentGAN(GAN):
         # x = LeakyReLU(alpha=0.2)(x)
         x = Dense(64)(x)
         x = LeakyReLU(alpha=0.1)(x)
-        validity = Dense(self.output_size, activation='sigmoid')(x)
+        validity = Dense(1, activation='sigmoid')(x)
 
         model = Model(inputs=[historic_inp, future_inp], outputs=validity)
         model.summary()
