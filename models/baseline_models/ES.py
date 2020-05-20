@@ -1,18 +1,9 @@
 import numpy as np
-from keras import Model
-from keras.layers import *
-from keras.optimizers import RMSprop
-from keras import backend
-import matplotlib.pyplot as plt
+
 from sklearn.metrics import mean_squared_error
 from statsmodels.tsa.holtwinters import ExponentialSmoothing, HoltWintersResults
 
-import tensorflow as tf
 from tqdm import tqdm
-
-from models.feed_forward_gan.GAN import GAN
-from utility.ClipConstraint import ClipConstraint
-from utility.split_data import split_sequence
 
 
 class ES:
@@ -25,6 +16,17 @@ class ES:
         self.mc_forward_passes = cfg['mc_forward_passes']
         self.exponential_smoothing = None
         self.variance = []
+        self.pred_int_80 = []
+        self.pred_int_95 = []
+
+        self.recurrent_forecasting = cfg['recurrent_forecasting']
+        if self.recurrent_forecasting:
+            self.output_size = 1
+        else:
+            self.output_size = self.forecasting_horizon
+
+    def build_model(self):
+        pass
 
     def fit_es(self, train):
         # scaler = MinMaxScaler(feature_range=(10 ** (-10), 1))
@@ -112,11 +114,14 @@ class ES:
         es_series = np.expand_dims(self.exponential_smoothing.forecast(steps=steps+self.window_size+self.forecasting_horizon), axis=-1)
         es_series = np.expand_dims(es_series, axis=0)
 
-        data = np.expand_dims(data, axis=0)
-        time_series = data - es_series[:, :-self.forecasting_horizon]
-
-        es_forecasts = np.zeros([steps, self.forecasting_horizon, 1])
+        forecasts = np.zeros([steps, self.forecasting_horizon, 1])
+        forecast_var = self.variance
+        forecast_std = np.vstack([np.sqrt(forecast_var)] * steps)
+        forecast_std = np.expand_dims(forecast_std, axis=-1)
         for i in tqdm(range(steps)):
             # forecast ES
-            es_forecasts[i] = es_series[:, self.window_size + i:self.window_size + i+self.forecasting_horizon]
-        return es_forecasts
+            forecasts[i] = es_series[:, self.window_size + i:self.window_size + i+self.forecasting_horizon]
+        self.pred_int_80 = np.concatenate([forecasts - 1.28 * forecast_std, forecasts + 1.28 * forecast_std], axis=-1)
+        self.pred_int_95 = np.concatenate([forecasts - 1.96 * forecast_std, forecasts + 1.96 * forecast_std], axis=-1)
+        print(self.pred_int_80.shape)
+        return forecasts

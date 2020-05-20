@@ -91,33 +91,16 @@ def train_gan(gan, data, epochs, batch_size=128, verbose=1):
 
     history = gan.fit(x_train, y_train, epochs=epochs, batch_size=batch_size, verbose=verbose)
 
-
-    """
-    plt.figure()
-    plt.title('Training Mean Squared Error')
-    plt.plot(np.linspace(1, epochs, epochs), history['mse'], label='Forecast MSE generator')
-    plt.legend()
-    # plt.show()
-
-    plt.figure()
-    plt.title('Training Generator and Discriminator Loss')
-    plt.plot(np.linspace(1, epochs, epochs), history['G_loss'], label='Generator loss')
-    plt.plot(np.linspace(1, epochs, epochs), history['D_loss'], label='Discriminator loss')
-    plt.legend()
-    # plt.show()
-    """
-
     return gan
 
 
 def test_model(gan, data, plot=True):
     forecast = gan.monte_carlo_forecast(data,
-                                        steps=int(len(data) - gan.window_size))  # steps x horizon x mc_forward_passes
+                                        steps=int(len(data) - gan.window_size), plot=plot)  # steps x horizon x mc_forward_passes
     forecast_mean = forecast.mean(axis=-1)
     forecast_std = forecast.std(axis=-1)
-    print('Forecast SD:', forecast_std)
     forecast_var = forecast.var(axis=-1)
-    # print('Mutual information:', normalized_mutual_info_score(forecast_mean[:, 0], data[gan.window_size:, 0]))
+
     if plot:
         x_pred = np.linspace(gan.window_size + 1, len(data), len(data) - gan.window_size)
         plt.figure()
@@ -132,18 +115,9 @@ def test_model(gan, data, plot=True):
         plt.legend()
         plt.show()
     forecast_mse = sliding_window_mse(forecast_mean, data[gan.window_size:], gan.forecasting_horizon)
-    print('Mean forecast MSE:', forecast_mse.mean())
-    print('Forecast MSE:', forecast_mse)
-    total_uncertainty = np.sqrt(forecast_var+forecast_mse)
 
     forecast_smape = sliding_window_smape(forecast_mean, data[gan.window_size:], gan.forecasting_horizon)
-    print('Mean forecast SMAPE:', forecast_smape.mean())
-    print('Forecast SMAPE:', forecast_smape)
 
-    # print('Mean validation MSE:', validation_mse.mean())
-    # print('Validation MSE:', validation_mse)
-    # print('Mean forecast standard deviation:', forecast_std.mean(axis=0))
-    # print('Mean total forecast standard deviation:', total_uncertainty.mean(axis=0))
     coverage_80_1 = sliding_window_coverage(actual_values=data[gan.window_size:],
                                             upper_limits=np.quantile(forecast, q=0.9, axis=-1),
                                             lower_limits=np.quantile(forecast, q=0.1, axis=-1),
@@ -153,18 +127,18 @@ def test_model(gan, data, plot=True):
                                             lower_limits=np.quantile(forecast, q=0.025, axis=-1),
                                             forecast_horizon=gan.forecasting_horizon)
     coverage_80_2 = sliding_window_coverage(actual_values=data[gan.window_size:],
-                                            upper_limits=forecast_mean + 1.28 * total_uncertainty,
-                                            lower_limits=forecast_mean - 1.28 * total_uncertainty,
-                                            forecast_horizon=gan.forecasting_horizon).mean()
+                                            upper_limits=forecast_mean + 1.28 * forecast_std,
+                                            lower_limits=forecast_mean - 1.28 * forecast_std,
+                                            forecast_horizon=gan.forecasting_horizon)
     coverage_95_2 = sliding_window_coverage(actual_values=data[gan.window_size:],
-                                            upper_limits=forecast_mean + 1.96 * total_uncertainty,
-                                            lower_limits=forecast_mean - 1.96 * total_uncertainty,
+                                            upper_limits=forecast_mean + 1.96 * forecast_std,
+                                            lower_limits=forecast_mean - 1.96 * forecast_std,
                                             forecast_horizon=gan.forecasting_horizon)
 
     width_80_1 = np.quantile(forecast, q=0.9, axis=-1)-np.quantile(forecast, q=0.1, axis=-1)
     width_95_1 = np.quantile(forecast, q=0.975, axis=-1)-np.quantile(forecast, q=0.025, axis=-1)
-    width_80_2 = 2*1.28*total_uncertainty
-    width_95_2 = 2*1.96*total_uncertainty
+    width_80_2 = 2*1.28*forecast_std
+    width_95_2 = 2*1.96*forecast_std
 
     if plot:
         plot_results(sliding_window_mse(forecast_mean, data[gan.window_size:], gan.forecasting_horizon),
@@ -188,7 +162,7 @@ def pipeline():
     forecast_mse_list, forecast_smape_list = [], []
     width_80_1_list, width_95_1_list, width_80_2_list, width_95_2_list = [], [], [], []
     coverage_80_1_list, coverage_95_1_list, coverage_80_2_list, coverage_95_2_list = [], [], [], []
-    for i in range(5):
+    for i in range(1):
         gan = configure_model(cfg=cfg['gan'])
         train, test = load_data(cfg=cfg['data'], window_size=gan.window_size)
         trained_gan = train_gan(gan=gan, data=train, epochs=cfg['gan']['epochs'],
@@ -201,22 +175,33 @@ def pipeline():
         width_80_1_list.append(width_80_1), width_95_1_list.append(width_95_1)
         width_80_2_list.append(width_80_2), width_95_2_list.append(width_95_2)
 
+    print('========================================================'
+          '\n================ Point Forecast Metrics ================'
+          '\n========================================================')
     print('Mean forecast MSE:', np.mean(np.mean(forecast_mse_list, axis=0)))
-    print('Forecast MSE:', np.mean(forecast_mse_list, axis=0))
+    print('Forecast MSE:', np.mean(np.array(forecast_mse_list), axis=0))
     print('Mean forecast SMAPE:', np.mean(np.mean(forecast_smape_list, axis=0)))
-    print('Forecast SMAPE:', np.mean(forecast_smape_list, axis=0))
+    print('Forecast SMAPE:', np.mean(np.array(forecast_smape_list), axis=0))
+
+    print('========================================================'
+          '\n================== Model Uncertainty ==================='
+          '\n========================================================')
     print('80%-prediction interval coverage - Mean:', np.mean(np.mean(coverage_80_1_list, axis=0)),
           ', width:', np.mean(width_80_1_list),
-          '\n Forecast horizon:', np.array(coverage_80_1_list).mean(axis=0))
-    print('95%-prediction interval coverage - Mean:', np.mean(np.mean(coverage_95_1_list, axis=0)),
+          '\n Forecast horizon:', np.mean(np.array(coverage_80_1_list), axis=0))
+    print('95%-prediction interval coverage - Mean:',  np.mean(np.mean(coverage_95_1_list, axis=0)),
           ', width:', np.mean(width_95_1_list),
-          '\n Forecast horizon:', np.array(coverage_95_1_list).mean(axis=0))
+          '\n Forecast horizon:', np.mean(np.array(coverage_95_1_list), axis=0))
+
+    print('========================================================'
+          '\n========== Model Uncertainty + Validation MSE ========== '
+          '\n========================================================')
     print('80%-prediction interval coverage - Mean:', np.mean(np.mean(coverage_80_2_list, axis=0)),
           ', width:', np.mean(width_80_2_list),
-          '\n Forecast horizon:', np.array(coverage_80_2_list).mean(axis=0))
+          '\n Forecast horizon:', np.mean(np.array(coverage_80_2_list), axis=0))
     print('95%-prediction interval coverage - Mean:', np.mean(np.mean(coverage_95_2_list, axis=0)),
           ', width:', np.mean(width_95_2_list),
-          '\n Forecast horizon:', np.array(coverage_95_2_list).mean(axis=0))
+          '\n Forecast horizon:', np.mean(np.array(coverage_95_2_list), axis=0))
 
 
 if __name__ == '__main__':

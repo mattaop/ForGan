@@ -19,6 +19,7 @@ class RecurrentGAN(GAN):
     def __init__(self, cfg):
         GAN.__init__(self, cfg)
         self.plot_rate = cfg['plot_rate']
+        self.print_coverage = cfg['print_coverage']
         self.plot_folder = 'RecurrentGAN'
         self.window_size = cfg['window_size']
         self.forecasting_horizon = cfg['forecast_horizon']
@@ -28,7 +29,7 @@ class RecurrentGAN(GAN):
         else:
             self.output_size = self.forecasting_horizon
 
-        self.noise_vector_size = cfg['noise_vector_size']   # Try larger vector
+        self.noise_vector_size = cfg['noise_vector_size']
         self.discriminator_epochs = cfg['discriminator_epochs']
         self.mc_forward_passes = cfg['mc_forward_passes']
 
@@ -75,11 +76,13 @@ class RecurrentGAN(GAN):
 
         hist = SimpleRNN(16, return_sequences=False)(historic_inp)
         # hist = LSTM(16, return_sequences=False)(historic_inp)
-        # hist = GRU(16, return_sequences=False)(historic_inp)
+        # hist = GRU(8, return_sequences=False)(historic_inp)
 
         x = Concatenate(axis=1)([hist, noise_inp])
-        x = BatchNormalization()(x)
+        # x = BatchNormalization()(x)
         x = Dense(32)(x)
+        x = ReLU()(x)
+        x = Dense(16)(x)
         x = ReLU()(x)
         prediction = Dense(self.output_size)(x)
 
@@ -97,10 +100,15 @@ class RecurrentGAN(GAN):
 
         x = Concatenate(axis=1)([historic_inp, future_inp])
 
-        x = SimpleRNN(64, return_sequences=False)(x)
+        x = SimpleRNN(128, dropout=0.1, return_sequences=False)(x)
+        # x = GRU(64, return_sequences=False)(x)
         # x = LeakyReLU(alpha=0.2)(x)
         x = Dense(64)(x)
         x = LeakyReLU(alpha=0.1)(x)
+        x = Dropout(0.2)(x)
+        x = Dense(32)(x)
+        x = LeakyReLU(alpha=0.1)(x)
+        x = Dropout(0.2)(x)
         validity = Dense(1, activation='sigmoid')(x)
 
         model = Model(inputs=[historic_inp, future_inp], outputs=validity)
@@ -108,82 +116,7 @@ class RecurrentGAN(GAN):
 
         return model
 
-    def train(self, epochs, batch_size=128, data_samples=5000):
-        paths = ['ims',
-                 'ims/' + self.plot_folder
-                 ]
-        for i in paths:
-            if not os.path.exists(i):
-                os.makedirs(i)
-
-        # Load the data
-        # time_series = generate_arp_data(5, 600, 500)
-        time_series = generate_noise(data_samples)
-        x_train, y_train = split_sequence(time_series, self.window_size, self.forecasting_horizon)
-
-        half_batch = int(batch_size / 2)
-        forecast_mse = np.zeros(epochs)
-        kl_divergence = np.zeros(epochs)
-
-        for epoch in range(epochs):
-
-            # ---------------------
-            #  Train Discriminator
-            # ---------------------
-            for d_epochs in range(self.discriminator_epochs):
-                # Select a random half batch of images
-                idx = np.random.randint(0, x_train.shape[0], half_batch)
-                historic_time_series = x_train[idx]
-                future_time_series = y_train[idx]
-
-                noise = self._generate_noise(half_batch)  # Normalisere til 1
-
-                # Generate a half batch of new images
-                gen_forecasts = self.generator.predict([historic_time_series, noise])
-
-                # Train the discriminator
-                d_loss_real = self.discriminator.train_on_batch([historic_time_series, future_time_series],
-                                                                self._get_labels(batch_size=half_batch, real=True))
-                d_loss_fake = self.discriminator.train_on_batch([historic_time_series,
-                                                                 tf.keras.backend.expand_dims(gen_forecasts, axis=-1)],
-                                                                self._get_labels(batch_size=half_batch, real=False))
-                d_loss = 0.5 * np.add(d_loss_real, d_loss_fake)
-
-            # ---------------------
-            #  Train Generator
-            # ---------------------
-
-            noise = self._generate_noise(batch_size)
-
-            # The generator wants the discriminator to label the generated samples
-            # as valid (ones)
-            valid_y = np.array([1] * batch_size)
-
-            idx = np.random.randint(0, x_train.shape[0], batch_size)
-            historic_time_series = x_train[idx]
-            # Train the generator
-            g_loss = self.combined.train_on_batch([historic_time_series, noise], valid_y)
-
-            # Measure forecast MSE of generator
-            forecast_mse[epoch] = mean_squared_error(future_time_series[:, :, 0], gen_forecasts)
-            # kl_divergence[epoch] = sum(self.kl_divergence(future_time_series[:, i, 0], gen_forecasts[:, i])
-            #                           for i in range(self.forecasting_horizon))/self.forecasting_horizon
-
-            # Plot the progress
-            # print("KL-divergence: ", kl_divergence[epoch])
-
-            if epoch % self.plot_rate == 0:
-                print("%d [D loss: %f, acc.: %.2f%%] [G loss: %f, forecast mse: %f]" %
-                      (epoch, d_loss[0], 100 * d_loss[1], g_loss, forecast_mse[epoch]))
-                self.plot_distributions(future_time_series[:, :, 0], gen_forecasts,
-                                        f'ims/' + self.plot_folder + f'/epoch{epoch:03d}.png')
-
-        plt.figure()
-        plt.plot(np.linspace(1, epochs, epochs), forecast_mse, label='Training loss generator')
-        plt.legend()
-        plt.show()
-
-    def fit(self, x, y, epochs=1, batch_size=32, verbose=1):
+    def fit(self, x, y, x_val=None, y_val=None, epochs=1, batch_size=32, verbose=1):
         half_batch = int(batch_size / 2)
         forecast_mse = np.zeros(epochs)
         G_loss = np.zeros(epochs)
@@ -216,15 +149,16 @@ class RecurrentGAN(GAN):
             # ---------------------
             #  Train Generator
             # ---------------------
-
             generator_noise = self._generate_noise(batch_size)
 
             # The generator wants the discriminator to label the generated samples
             # as valid (ones)
-            valid_y = np.array([1] * batch_size)
 
             idx = np.random.randint(0, x.shape[0], batch_size)
             historic_time_series = x[idx]
+
+            valid_y = np.array([1] * batch_size)
+
             # Train the generator
             g_loss = self.combined.train_on_batch([historic_time_series, generator_noise], valid_y)
 
@@ -234,18 +168,52 @@ class RecurrentGAN(GAN):
             #                           for i in range(self.forecasting_horizon))/self.forecasting_horizon
             G_loss[epoch] = g_loss
             D_loss[epoch] = d_loss[0]
-            # Plot the progress
-            if verbose == 1:
-                print("%d [D loss: %f, acc.: %.2f%%] [G loss: %f, forecast mse: %f]" %
-                      (epoch, d_loss[0], 100 * d_loss[1], g_loss, forecast_mse[epoch]))
-            if verbose == 0 and epoch % 100==0:
-                print("%d [D loss: %f, acc.: %.2f%%] [G loss: %f, forecast mse: %f]" %
-                      (epoch, d_loss[0], 100 * d_loss[1], g_loss, forecast_mse[epoch]))
-            # print("KL-divergence: ", kl_divergence[epoch])
+            # Print the progress
+            if epoch % self.plot_rate == 0:
+                if self.print_coverage and (x_val is None) and (y_val is None):
+                    idx = np.random.randint(0, x.shape[0], batch_size)
+                    historic_time_series = x[idx]
+                    future_time_series = y[idx]
+                    forecasts = np.zeros([batch_size, self.output_size, 100])
+                    for j in range(batch_size):
+                        generator_noise = self._generate_noise(100)
+                        x_input = np.vstack([np.expand_dims(historic_time_series[j], axis=0)] * 100)
 
-            if epoch % self.plot_rate == 0 and verbose == 1:
-                self.plot_distributions(future_time_series[:, :, 0], gen_forecasts,
-                                        f'ims/' + self.plot_folder + f'/epoch{epoch:03d}.png')
+                        forecasts[j] = self.generator.predict([x_input, generator_noise]).transpose()
+                    coverage_80_pi = compute_coverage(actual_values=future_time_series[:, :, 0],
+                                                      upper_limits=np.quantile(forecasts, q=0.9, axis=-1),
+                                                      lower_limits=np.quantile(forecasts, q=0.1, axis=-1))
+                    coverage_95_pi = compute_coverage(actual_values=future_time_series[:, :, 0],
+                                                      upper_limits=np.quantile(forecasts, q=0.975, axis=-1),
+                                                      lower_limits=np.quantile(forecasts, q=0.025, axis=-1))
+
+                    print("%d [D loss: %f, acc.: %.2f%%] [G loss: %f, forecast mse: %f][Mean forecast mse: %f, "
+                          "80%%-PI: %.2f%%, 95%%-PI: %.2f%%]" %
+                          (epoch, d_loss[0], 100 * d_loss[1], g_loss, forecast_mse[epoch],
+                           mean_squared_error(future_time_series[:, :, 0], np.mean(forecasts, axis=-1)),
+                           100*coverage_80_pi, 100*coverage_95_pi))
+                elif self.print_coverage and (x_val is not None) and (y_val is not None):
+                    forecasts = np.zeros([len(y_val), self.output_size, 100])
+                    for j in range(len(y_val)):
+                        generator_noise = self._generate_noise(100)
+                        x_input = np.vstack([np.expand_dims(x_val[j], axis=0)] * 100)
+                        forecasts[j] = self.generator.predict([x_input, generator_noise]).transpose()
+                    coverage_80_pi = compute_coverage(actual_values=y_val,
+                                                      upper_limits=np.quantile(forecasts, q=0.9, axis=-1),
+                                                      lower_limits=np.quantile(forecasts, q=0.1, axis=-1))
+                    coverage_95_pi = compute_coverage(actual_values=y_val,
+                                                      upper_limits=np.quantile(forecasts, q=0.975, axis=-1),
+                                                      lower_limits=np.quantile(forecasts, q=0.025, axis=-1))
+
+                    print("%d [D loss: %f, acc.: %.2f%%] [G loss: %f, forecast mse: %f][Validation mse: %f, "
+                          "80%%-PI: %.2f%%, 95%%-PI: %.2f%%]" %
+                          (epoch, d_loss[0], 100 * d_loss[1], g_loss, forecast_mse[epoch],
+                           mean_squared_error(y_val[:, 0], np.mean(forecasts, axis=-1)),
+                           100 * coverage_80_pi, 100 * coverage_95_pi))
+                else:
+                    print("%d [D loss: %f, acc.: %.2f%%] [G loss: %f, forecast mse: %f]" %
+                          (epoch, d_loss[0], 100 * (d_loss[1]), g_loss, forecast_mse[epoch]))
+
         return {'mse': forecast_mse, 'G_loss': G_loss, 'D_loss': D_loss, 'Accuracy': 100 * d_loss[1]}
 
     def forecast(self, x):

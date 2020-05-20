@@ -24,6 +24,7 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 from sklearn.metrics import mean_squared_error, mutual_info_score, normalized_mutual_info_score
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
+import seaborn as sns
 
 from config.load_config import load_config_file
 from models.get_model import get_gan
@@ -48,7 +49,7 @@ def configure_model(cfg):
 
 def load_data(cfg, window_size):
     if cfg['data_source'].lower() == 'sine':
-        data = generate_sine_data(num_points=1000)
+        data = generate_sine_data(num_points=1000, plot=False)
     elif cfg['data_source'].lower() == 'oslo':
         data = load_oslo_temperature()
     elif cfg['data_source'].lower() == 'australia':
@@ -56,6 +57,7 @@ def load_data(cfg, window_size):
 
     else:
         return None
+    print('Data shape', data.shape)
     train = data[:-int(len(data)*cfg['test_split'])]
     test = data[-int(len(data)*cfg['test_split']+window_size):]
     train, test = scale_data(train, test)
@@ -101,14 +103,14 @@ def train_gan(gan, data, epochs, batch_size=128, verbose=1):
 
     # Split training data into (x_t-l, ..., x_t), (x_t+1) pairs
     x_train, y_train = split_sequence(train, gan.window_size, gan.output_size)
-
-    history = gan.fit(x_train, y_train, epochs=epochs, batch_size=batch_size, verbose=verbose)
+    x_val, y_val = split_sequence(data, gan.window_size, gan.output_size)
+    history = gan.fit(x_train, y_train, x_val=x_val, y_val=y_val, epochs=epochs, batch_size=batch_size, verbose=verbose)
 
     validation_mse = compute_validation_error(gan, val)
 
     """
     plt.figure()
-    plt.title('Training Mean Squared Error')
+    plt.title('Training Mean Squared Error')y_val
     plt.plot(np.linspace(1, epochs, epochs), history['mse'], label='Forecast MSE generator')
     plt.legend()
     # plt.show()
@@ -125,7 +127,7 @@ def train_gan(gan, data, epochs, batch_size=128, verbose=1):
 
 
 def test_model(gan, data, validation_mse, plot=True):
-    forecast = gan.monte_carlo_forecast(data, steps=int(len(data)-gan.window_size), plot=True)  # steps x horizon x mc_forward_passes
+    forecast = gan.monte_carlo_forecast(data, steps=int(len(data)-gan.window_size), plot=plot)  # steps x horizon x mc_forward_passes
     forecast_mean = forecast.mean(axis=-1)
     forecast_std = forecast.std(axis=-1)
     forecast_var = forecast.var(axis=-1)
@@ -193,6 +195,7 @@ def test_model(gan, data, validation_mse, plot=True):
                                                 forecast_horizon=gan.forecasting_horizon),
                      y2_label='95% PI coverage',
                      title='Prediction Interval Coverage', y_label='Coverage')
+
     return forecast_mse, forecast_smape, coverage_80_1, coverage_95_1, coverage_80_2, coverage_95_2, width_80_1, width_95_1, width_80_2, width_95_2, forecast_std.mean(axis=0)
 
 
@@ -206,10 +209,13 @@ def pipeline():
         train, test = load_data(cfg=cfg['data'], window_size=gan.window_size)
         trained_gan, validation_mse = train_gan(gan=gan, data=train, epochs=cfg['gan']['epochs'],
                                                 batch_size=cfg['gan']['batch_size'], verbose=0)
-        test_model(gan=trained_gan, data=train, validation_mse=validation_mse, plot=True)
+        # test_model(gan=trained_gan, data=train, validation_mse=validation_mse, plot=False)
         forecast_mse, forecast_smape, coverage_80_1, coverage_95_1, coverage_80_2, coverage_95_2, width_80_1, \
-            width_95_1, width_80_2, width_95_2, forecast_std = test_model(gan=trained_gan, data=test, validation_mse=validation_mse, plot=True)
-        forecast_mse_list.append(forecast_mse), forecast_smape_list.append(forecast_smape), validation_mse_list.append(validation_mse)
+            width_95_1, width_80_2, width_95_2, forecast_std = test_model(gan=trained_gan, data=test,
+                                                                          validation_mse=validation_mse, plot=False)
+        print(forecast_std)
+        forecast_mse_list.append(forecast_mse), forecast_smape_list.append(forecast_smape)
+        validation_mse_list.append(validation_mse)
         forecast_std_list.append(forecast_std)
         coverage_80_1_list.append(coverage_80_1), coverage_95_1_list.append(coverage_95_1)
         coverage_80_2_list.append(coverage_80_2), coverage_95_2_list.append(coverage_95_2)
@@ -240,6 +246,7 @@ def pipeline():
     print('========================================================'
           '\n========== Model Uncertainty + Validation MSE ========== '
           '\n========================================================')
+    print(np.array(forecast_std_list).shape, np.array(validation_mse_list).shape)
     print('Estimated Standard deviation:', np.mean(np.mean(np.sqrt(np.array(forecast_std_list)**2
                                                                    + np.array(validation_mse_list)), axis=0)),
           np.mean(np.sqrt(np.array(forecast_std_list)**2 + np.array(validation_mse_list)), axis=0))

@@ -4,6 +4,7 @@ from keras import Model
 from keras.layers import *
 from keras.optimizers import Adam
 import tensorflow as tf
+from utility.compute_statistics import compute_coverage
 from models.recurrent_gan.RecurrentGAN import RecurrentGAN
 from utility.diversity_sensitive_loss import DiversitySensitiveLoss
 
@@ -14,8 +15,8 @@ class RecurrentDSGAN(RecurrentGAN):
         self.plot_folder = 'RecurrentConvDSGAN'
 
         self.optimizer = Adam(cfg['learning_rate'], 0.5)
-        self.alpha = 0.1
-        self.beta = 0.1
+        self.alpha = 0.05
+        self.beta = 0.05
         self.tau = 2
         loss = DiversitySensitiveLoss(self.alpha, self.beta, self.tau, self.discriminator_loss)
         self.generator_loss = loss.dummy_loss
@@ -57,7 +58,7 @@ class RecurrentDSGAN(RecurrentGAN):
         self.combined.summary()
         self.combined.compile(loss=self.generator_loss, optimizer=self.optimizer)
 
-    def fit(self, x, y, epochs=1, batch_size=32, verbose=1):
+    def fit(self, x, y,  epochs=1, batch_size=32, verbose=1):
         half_batch = int(batch_size / 2)
         forecast_mse = np.zeros(epochs)
         G_loss = np.zeros(epochs)
@@ -110,15 +111,33 @@ class RecurrentDSGAN(RecurrentGAN):
             G_loss[epoch] = g_loss
             D_loss[epoch] = d_loss[0]
             # Plot the progress
-            if verbose == 1:
-                print("%d [D loss: %f, acc.: %.2f%%] [G loss: %f, forecast mse: %f]" %
-                      (epoch, d_loss[0], 100 * d_loss[1], g_loss, forecast_mse[epoch]))
-            if verbose == 0 and epoch % 100 == 0:
-                print("%d [D loss: %f, acc.: %.2f%%] [G loss: %f, forecast mse: %f]" %
-                      (epoch, d_loss[0], 100 * d_loss[1], g_loss, forecast_mse[epoch]))
-            # print("KL-divergence: ", kl_divergence[epoch])
+            if verbose == 1 and epoch % self.plot_rate == 0:
+                if self.print_coverage:
+                    idx = np.random.randint(0, x.shape[0], batch_size)
+                    historic_time_series = x[idx]
+                    future_time_series = y[idx]
+                    forecasts = np.zeros([batch_size, self.output_size, 100])
+                    for j in range(batch_size):
+                        generator_noise = self._generate_noise(100)
+                        x_input = np.vstack([np.expand_dims(historic_time_series[j], axis=0)] * 100)
 
-            if epoch % self.plot_rate == 0 and verbose == 1:
-                self.plot_distributions(future_time_series[:, :, 0], gen_forecasts,
-                                        f'ims/' + self.plot_folder + f'/epoch{epoch:03d}.png')
+                        forecasts[j] = self.generator.predict([x_input, generator_noise]).transpose()
+                    coverage_80_pi = compute_coverage(actual_values=future_time_series[:, :, 0],
+                                                      upper_limits=np.quantile(forecasts, q=0.9, axis=-1),
+                                                      lower_limits=np.quantile(forecasts, q=0.1, axis=-1))
+                    coverage_95_pi = compute_coverage(actual_values=future_time_series[:, :, 0],
+                                                      upper_limits=np.quantile(forecasts, q=0.975, axis=-1),
+                                                      lower_limits=np.quantile(forecasts, q=0.025, axis=-1))
+
+                    print("%d [D loss: %f, acc.: %.2f%%] [G loss: %f, forecast mse: %f][Mean forecast mse: %f, "
+                          "80%%-PI: %.2f%%, 95%%-PI: %.2f%%]" %
+                          (epoch, d_loss[0], 100 * d_loss[1], g_loss, forecast_mse[epoch],
+                           mean_squared_error(future_time_series[:, :, 0], np.mean(forecasts, axis=-1)),
+                           100 * coverage_80_pi, 100 * coverage_95_pi))
+                    # coverage_distance = (coverage_80_pi-0.8)*0.8 + (coverage_95_pi-0.95)*0.95
+                    # self.alpha = self.alpha - coverage_distance*self.alpha
+                    # print(self.alpha)
+                else:
+                    print("%d [D loss: %f, acc.: %.2f%%] [G loss: %f, forecast mse: %f]" %
+                          (epoch, d_loss[0], 100 * (d_loss[1]), g_loss, forecast_mse[epoch]))
         return {'mse': forecast_mse, 'G_loss': G_loss, 'D_loss': D_loss, 'Accuracy': 100 * d_loss[1]}

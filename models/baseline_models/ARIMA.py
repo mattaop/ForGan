@@ -15,6 +15,17 @@ class ARIMA:
         self.mc_forward_passes = cfg['mc_forward_passes']
         self.arima_model = None
         self.variance = []
+        self.pred_int_80 = []
+        self.pred_int_95 = []
+
+        self.recurrent_forecasting = cfg['recurrent_forecasting']
+        if self.recurrent_forecasting:
+            self.output_size = 1
+        else:
+            self.output_size = self.forecasting_horizon
+
+    def build_model(self):
+        pass
 
     def fit_arima(self, train):
 
@@ -23,6 +34,7 @@ class ARIMA:
                                 stepwise=True, information_criterion='aicc')
 
         print(auto_model.summary())
+        self.arima_model = auto_model
         return auto_model
 
     def fit(self, x, y, epochs=1, batch_size=32, verbose=1):
@@ -30,26 +42,33 @@ class ARIMA:
         train = np.concatenate([x[0, :, 0], y[:, 0, 0]])
         arima = self.fit_arima(train)
         # transform data
-        pred_arima = arima.fittedvalues
+        # pred_arima = arima.fittedvalues
 
         # Print training mse
-        print('ES MSE:', mean_squared_error(y[:, :, 0], pred_arima[self.window_size:]))
+        # print('ES MSE:', mean_squared_error(y[:, :, 0], pred_arima[self.window_size:]))
 
     def forecast(self, x):
         # forecast exponential smoothing
-        es_forecasts = self.arima_model.forecast(steps=x.shape[0])
-        return es_forecasts
+        arima_forecasts = self.arima_model.forecast(steps=x.shape[0])
+        return arima_forecasts
 
     def monte_carlo_forecast(self, data, steps=1, plot=False):
-        # forecast ES
-        es_series = np.expand_dims(self.arima_model.forecast(steps=steps+self.window_size+self.forecasting_horizon), axis=-1)
-        es_series = np.expand_dims(es_series, axis=0)
+        data = data[-steps:]
+        print(data.shape)
+        forecasts = np.zeros([steps, self.forecasting_horizon])
+        pred_int_80 = np.zeros([steps, self.forecasting_horizon, 2])
+        pred_int_95 = np.zeros([steps, self.forecasting_horizon, 2])
 
-        data = np.expand_dims(data, axis=0)
-        time_series = data - es_series[:, :-self.forecasting_horizon]
-
-        forecasts = np.zeros([steps, self.forecasting_horizon, 1])
         for i in tqdm(range(steps)):
-            # forecast ES
-            forecasts[i] = es_series[:, self.window_size + i:self.window_size + i+self.forecasting_horizon]
+            forecast_arima_95 = self.arima_model.predict(n_periods=self.forecasting_horizon,
+                                                         return_conf_int=True, alpha=1 - 0.95)
+            forecast_arima_80 = self.arima_model.predict(n_periods=self.forecasting_horizon,
+                                                         return_conf_int=True, alpha=1 - 0.8)
+            forecasts[i] = forecast_arima_95[0]
+            pred_int_80[i] = forecast_arima_80[1]
+            pred_int_95[i] = forecast_arima_95[1]
+            self.arima_model.update(y=data[i])
+        self.pred_int_80 = pred_int_80
+        self.pred_int_95 = pred_int_95
+        print(pred_int_80.shape)
         return forecasts

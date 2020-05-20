@@ -34,7 +34,7 @@ def generate_sine_data(num_points=2000, plot=False):
         plt.ylabel('Density')
         plt.axvline(noise.mean(), color='b', linewidth=1)
         plt.show()
-
+    print('Noise standard deviation:', noise.std())
     return np.expand_dims(y, axis=-1)
 
 

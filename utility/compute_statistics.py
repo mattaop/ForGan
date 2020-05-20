@@ -23,12 +23,6 @@ def sliding_window_mse(forecast_mean, actual_values, forecast_horizon):
     mse = np.zeros(forecast_horizon)
     for i in range(forecast_horizon):
         mse[i] = mean_squared_error(actual_values[i:, 0], forecast_mean[:len(actual_values)-i, i])
-        #x = np.linspace(1, len(actual_values[i:, 0]), len(actual_values[i:, 0]))
-        #plt.figure()
-        #plt.plot(x, actual_values[i:, 0], label='Data')
-        #plt.plot(x, forecast_mean[:len(actual_values)-i, i], label='Predictions')
-        #plt.legend()
-    #plt.show()
     return mse
 
 

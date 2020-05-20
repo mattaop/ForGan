@@ -2,7 +2,7 @@ from models.feed_forward_gan import GAN, WGAN, DSGAN
 from models.conv_gan import ConvGAN, ConvWGAN
 from models.recurrent_gan import RecurrentGAN, RecurrentWGAN, RecurrentDSGAN, RecurrentConvGAN, RecurrentConvWGAN, \
     RecurrentConvDSGAN
-from models.baseline_models import RNN
+from models.baseline_models import RNN, ES, ARIMA
 from models.hybrid_gan import ESWGAN, ESRecurrentWGAN
 
 
@@ -74,6 +74,12 @@ def get_gan(cfg):
     elif model_name.lower() == 'rnn':
         print('Model: RNN')
         model = RNN.RNN(cfg)
+    elif model_name.lower() == 'es':
+        print('Model: ES')
+        model = ES.ES(cfg)
+    elif model_name.lower() == 'arima':
+        print('Model: ARIMA')
+        model = ARIMA.ARIMA(cfg)
     else:
         ImportError('Model ' + model_name + 'not found')
     return model

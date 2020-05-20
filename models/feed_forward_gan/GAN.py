@@ -21,7 +21,7 @@ class GAN:
         self.plot_rate = cfg['plot_rate']
         self.plot_folder = 'feed_forward_GAN'
         self.noise_vector_size = cfg['noise_vector_size']  # Try larger vector
-        self.noise_type = 'normal'  # uniform
+        self.noise_type = cfg['noise_type']  # normal, uniform
         self.discriminator_epochs = cfg['discriminator_epochs']
 
         self.optimizer = Adam(lr=cfg['learning_rate'], beta_1=0.5)

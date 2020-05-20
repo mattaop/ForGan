@@ -17,9 +17,9 @@ from utility.compute_statistics import compute_coverage
 class WGAN(GAN):
     def __init__(self, cfg):
         GAN.__init__(self, cfg)
-        self.plot_rate = 100
+        self.plot_rate = cfg['plot_rate']
         self.plot_folder = 'feed_forward_WGAN'
-        self.noise_vector_size = 10  # Try larger vector
+        self.noise_vector_size = cfg['noise_vector_size']  # Try larger vector
 
         self.optimizer = RMSprop(lr=cfg['learning_rate'])
         self.loss_function = self.wasserstein_loss
