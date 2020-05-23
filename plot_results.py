@@ -11,11 +11,11 @@ def read_training_files(file_name, training):
     return df
 
 
-def plot_results(save_file, file_names, file_labels, title, x_label, y_label, value='mse', training=True):
+def plot_results(save_file, file_names, file_labels, title, x_label, y_label, value='mse', training=True, plot_rate=1):
     plt.figure()
     for file_name, file_label in zip(file_names, file_labels):
         df = read_training_files(file_name, training)[value]
-        t = np.linspace(1, len(df), len(df))
+        t = np.linspace(1, len(df)*plot_rate, len(df))
         plt.plot(t, df, label=file_label)
     plt.title(title)
     plt.xlabel(x_label)
@@ -25,40 +25,46 @@ def plot_results(save_file, file_names, file_labels, title, x_label, y_label, va
     plt.show()
 
 
-def plot_training_results(file_names, file_labels, title, save_file='Train'):
+def plot_training_results(file_names, file_labels, title, save_file='Train', plot_rate=1):
     plot_results(save_file=save_file+'_train_mse', file_names=file_names, file_labels=file_labels, title=title[0],
-                 x_label='Epochs', y_label='Mean Squared Error (MSE)', value='mse', training=True)
+                 x_label='Epochs', y_label='Mean Squared Error (MSE)', value='mse', training=True, plot_rate=plot_rate)
     plot_results(save_file=save_file+'_train_80', file_names=file_names, file_labels=file_labels, title=title[1],
-                 x_label='Epochs', y_label='Coverage', value='coverage_80', training=True)
+                 x_label='Epochs', y_label='Coverage', value='coverage_80', training=True, plot_rate=plot_rate)
     plot_results(save_file=save_file+'_train_95', file_names=file_names, file_labels=file_labels, title=title[2],
-                 x_label='Epochs', y_label='Coverage', value='coverage_95', training=True)
+                 x_label='Epochs', y_label='Coverage', value='coverage_95', training=True, plot_rate=plot_rate)
 
 
-def plot_test_results(file_names, file_labels, title, save_file='Test'):
+def plot_test_results(file_names, file_labels, title, save_file='Test', plot_rate=1):
     plot_results(save_file=save_file+'_test_mse', file_names=file_names, file_labels=file_labels, title=title[0],
-                 x_label='Forecast horizon', y_label='Mean Squared Error (MSE)', value='mse', training=False)
+                 x_label='Forecast horizon', y_label='Mean Squared Error (MSE)', value='mse', training=False,
+                 plot_rate=plot_rate)
     plot_results(save_file=save_file+'_test_smape', file_names=file_names, file_labels=file_labels,  title=title[1],
                  x_label='Forecast horizon', y_label='Symmetric Mean Absolute Percentage Error (sMAPE)', value='smape',
-                 training=False)
+                 training=False, plot_rate=plot_rate)
     plot_results(save_file=save_file+'_test_80', file_names=file_names, file_labels=file_labels,  title=title[2],
-                 x_label='Forecast horizon', y_label='Coverage', value='coverage_80', training=False)
+                 x_label='Forecast horizon', y_label='Coverage', value='coverage_80', training=False,
+                 plot_rate=plot_rate)
     plot_results(save_file=save_file+'_test_95', file_names=file_names, file_labels=file_labels,  title=title[3],
-                 x_label='Forecast horizon', y_label='Coverage', value='coverage_95', training=False)
+                 x_label='Forecast horizon', y_label='Coverage', value='coverage_95', training=False,
+                 plot_rate=plot_rate)
 
 
 if __name__ == '__main__':
-    plot_training_results(['Epochs_10_D_epochs_1_batch_size_64_noise_vec_50.txt',
-                           'Epochs_10_D_epochs_2_batch_size_64_noise_vec_50.txt'],
+    plot_training_results(['Epochs_1500_D_epochs_1_batch_size_64_noise_vec_50.txt',
+                           'Epochs_1500_D_epochs_5_batch_size_64_noise_vec_50.txt',
+                           'Epochs_1500_D_epochs_10_batch_size_64_noise_vec_50.txt'],
                           ['D$_{epochs}$=1', 'D$_{epochs}$=2'],
                           save_file='sine',
                           title=['Training Mean Squared Error',
                                  'Training 80% Prediction Interval Coverage',
-                                 'Training 95% Prediction Interval Coverage'])
+                                 'Training 95% Prediction Interval Coverage'],
+                          plot_rate=25)
     plot_test_results(['Epochs_10_D_epochs_1_batch_size_64_noise_vec_50_learning_rate_0.001000.txt'],
                       ['D$_{epochs}$=1'],
                       save_file='sine',
                       title=['Forecast Mean Squared Error',
                              'Forecast Symmetric Mean Absolute Percentage Error',
                              'Forecast 80% Prediction Interval Coverage',
-                             'Forecast 95% Prediction Interval Coverage'])
+                             'Forecast 95% Prediction Interval Coverage'],
+                      plot_rate=25)
 

@@ -18,8 +18,11 @@ from utility.compute_statistics import compute_coverage
 
 class GAN:
     def __init__(self, cfg):
+        self.model_name = cfg['model_name'].lower()
         self.plot_rate = cfg['plot_rate']
         self.plot_folder = 'feed_forward_GAN'
+        self.save_model_interval = cfg['save_model_interval']
+        self.data_source = cfg['data_source'].lower()
 
         self.generator_nodes = cfg['generator_nodes']
         self.discriminator_nodes = cfg['discriminator_nodes']
@@ -27,7 +30,8 @@ class GAN:
         self.noise_type = cfg['noise_type']  # normal, uniform
         self.discriminator_epochs = cfg['discriminator_epochs']
 
-        self.optimizer = Adam(lr=cfg['learning_rate'], beta_1=0.5)
+        self.learning_rate = cfg['learning_rate']
+        self.optimizer = Adam(lr=self.learning_rate, beta_1=0.5)
         self.discriminator_loss = binary_crossentropy
         self.generator_loss = binary_crossentropy
 

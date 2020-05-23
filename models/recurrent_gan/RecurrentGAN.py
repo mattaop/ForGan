@@ -5,6 +5,7 @@ from sklearn.metrics import mean_squared_error
 from keras import Model
 from keras.layers import *
 from keras.optimizers import Adam
+from keras.models import load_model
 import tensorflow as tf
 from tqdm import tqdm
 
@@ -217,10 +218,20 @@ class RecurrentGAN(GAN):
                 else:
                     print("%d [D loss: %f, acc.: %.2f%%] [G loss: %f, forecast mse: %f]" %
                           (epoch, d_loss[0], 100 * (d_loss[1]), g_loss, forecast_mse[epoch]))
+            if (epoch+1) % self.save_model_interval == 0:
+                self.discriminator.save("results/" + self.data_source + "/" + self.model_name +
+                                        "/Epochs_%d_D_epochs_%d_batch_size_%d_noise_vec_%d_lr_%f/discriminator_%d.h5" %
+                                        (epochs, self.discriminator_epochs, batch_size, self.noise_vector_size,
+                                         self.learning_rate,  epoch+1))
+                self.generator.save("results/" + self.data_source + "/" + self.model_name +
+                                    "/Epochs_%d_D_epochs_%d_batch_size_%d_noise_vec_%d_lr_%f/generator_%d.h5" %
+                                    (epochs, self.discriminator_epochs, batch_size, self.noise_vector_size,
+                                     self.learning_rate, epoch+1))
         if self.print_coverage:
-            file_name = ("training_results/Epochs_%d_D_epochs_%d_batch_size_%d_noise_vec_%d.txt" %
-                         (epochs, self.discriminator_epochs, batch_size, self.noise_vector_size))
-            with open(file_name, "w") as f:
+            file_name = ("results/" + self.data_source + "/" + self.model_name +
+                         "/Epochs_%d_D_epochs_%d_batch_size_%d_noise_vec_%d_lr_%f/training_results.txt" %
+                         (epochs, self.discriminator_epochs, batch_size, self.noise_vector_size, self.learning_rate))
+            with open(file_name, "a") as f:
                 f.write("mse,coverage_80,coverage_95\n")
                 for (validation_mse, coverage_80_pi, coverage_95_pi) in zip(validation_mse, coverage_80_pi, coverage_95_pi):
                     f.write("{0},{1},{2}\n".format(validation_mse, coverage_80_pi, coverage_95_pi))

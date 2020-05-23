@@ -7,3 +7,4 @@ config/paths.yml
 data_files/
 test_results/
 training_results/
+results/

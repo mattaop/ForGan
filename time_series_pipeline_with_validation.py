@@ -20,6 +20,7 @@ config = tf.ConfigProto(intra_op_parallelism_threads=1, inter_op_parallelism_thr
 sess = tf.Session(graph=tf.get_default_graph(), config=config)
 k.set_session(sess)
 
+import time
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 from sklearn.metrics import mean_squared_error, mutual_info_score, normalized_mutual_info_score
@@ -32,109 +33,45 @@ from utility.split_data import split_sequence
 from data.generate_sine import generate_sine_data
 from data.load_data import load_oslo_temperature, load_australia_temperature
 from utility.compute_statistics import *
+from time_series_pipeline import configure_model, load_data, plot_results
 
 
-def configure_model(cfg):
-    gan = get_gan(cfg)
-    gan.build_model()
-
-    paths = ['ims',
-             'ims/' + gan.plot_folder
-             ]
-    for i in paths:
-        if not os.path.exists(i):
-            os.makedirs(i)
-    return gan
-
-
-def load_data(cfg, window_size):
-    if cfg['data_source'].lower() == 'sine':
-        data = generate_sine_data(num_points=2000, plot=False)
-    elif cfg['data_source'].lower() == 'oslo':
-        data = load_oslo_temperature()
-    elif cfg['data_source'].lower() == 'australia':
-        data = load_australia_temperature()
-
-    else:
-        return None
-    print('Data shape', data.shape)
-    train = data[:-int(len(data)*cfg['test_split'])]
-    test = data[-int(len(data)*cfg['test_split']+window_size):]
-    train, test = scale_data(train, test)
-    return train, test
-
-
-def scale_data(train, test):
-    scaler = MinMaxScaler(feature_range=(0, 1))
-    train = scaler.fit_transform(train)
-    test = scaler.transform(test)
-    return train, test
-
-
-def plot_results(y, label, y2=None, y2_label=None, title='', y_label='Value'):
-    x = np.linspace(1, len(y), len(y))
-    plt.figure()
-    plt.title(title)
-    plt.plot(x, y, label=label)
-    if y2 is not None:
-        plt.plot(x, y2, label=y2_label)
-    plt.ylabel(y_label)
-    plt.xlabel('Forecast horizon')
-    plt.legend()
-    plt.show()
-
-
-def compute_validation_error(gan, data):
+def compute_validation_error(model, data):
     # Split validation data into (x_t-l, ..., x_t), (x_t+1) pairs
-    x_val, y_val = split_sequence(data, gan.window_size, gan.output_size)
+    x_val, y_val = split_sequence(data, model.window_size, model.output_size)
 
     # Compute inherent noise on validation set
-    y_predicted = gan.forecast(x_val)
+    y_predicted = model.forecast(x_val)
 
-    validation_mse = np.zeros(gan.output_size)
-    for i in range(gan.output_size):
+    validation_mse = np.zeros(model.output_size)
+    for i in range(model.output_size):
         validation_mse[i] = mean_squared_error(y_val[:, i], y_predicted[:, i])
     return validation_mse
 
 
-def train_gan(gan, data, epochs, batch_size=128, verbose=1):
+def train_model(model, data, epochs, batch_size=128, verbose=1):
     # Split data in training and validation set
-    train, val = data[:-int(len(data)*0.1)], data[-int(gan.window_size+len(data)*0.1):]
+    train, val = data[:-int(len(data)*0.1)], data[-int(model.window_size+len(data)*0.1):]
 
     # Split training data into (x_t-l, ..., x_t), (x_t+1) pairs
-    x_train, y_train = split_sequence(train, gan.window_size, gan.output_size)
-    x_val, y_val = split_sequence(data, gan.window_size, gan.output_size)
-    history = gan.fit(x_train, y_train, x_val=x_val, y_val=y_val, epochs=epochs, batch_size=batch_size, verbose=verbose)
+    x_train, y_train = split_sequence(train, model.window_size, model.output_size)
+    x_val, y_val = split_sequence(data, model.window_size, model.output_size)
+    history = model.fit(x_train, y_train, x_val=x_val, y_val=y_val, epochs=epochs, batch_size=batch_size, verbose=verbose)
 
-    validation_mse = compute_validation_error(gan, val)
+    validation_mse = compute_validation_error(model, val)
 
-    """
-    plt.figure()
-    plt.title('Training Mean Squared Error')y_val
-    plt.plot(np.linspace(1, epochs, epochs), history['mse'], label='Forecast MSE generator')
-    plt.legend()
-    # plt.show()
-    
-    plt.figure()
-    plt.title('Training Generator and Discriminator Loss')
-    plt.plot(np.linspace(1, epochs, epochs), history['G_loss'], label='Generator loss')
-    plt.plot(np.linspace(1, epochs, epochs), history['D_loss'], label='Discriminator loss')
-    plt.legend()
-    # plt.show()
-    """
-
-    return gan, validation_mse
+    return model, validation_mse
 
 
-def test_model(gan, data, validation_mse, plot=True):
-    forecast = gan.monte_carlo_forecast(data, steps=int(len(data)-gan.window_size), plot=plot)  # steps x horizon x mc_forward_passes
+def test_model(model, data, validation_mse, plot=True):
+    forecast = model.monte_carlo_forecast(data, steps=int(len(data)-model.window_size), plot=plot)  # steps x horizon x mc_forward_passes
     forecast_mean = forecast.mean(axis=-1)
     forecast_std = forecast.std(axis=-1)
     forecast_var = forecast.var(axis=-1)
 
     total_uncertainty = np.sqrt(forecast_var + validation_mse)
     if plot:
-        x_pred = np.linspace(gan.window_size+1, len(data), len(data)-gan.window_size)
+        x_pred = np.linspace(model.window_size+1, len(data), len(data)-model.window_size)
         plt.figure()
         plt.plot(np.linspace(1, len(data), len(data)), data, label='Data')
         plt.plot(x_pred, forecast_mean[:, 0], label='Predictions')
@@ -144,26 +81,26 @@ def test_model(gan, data, validation_mse, plot=True):
                          alpha=0.2, edgecolor='#CC4F1B', facecolor='#FF9848', label='95%-PI')
         plt.legend()
         plt.show()
-    forecast_mse = sliding_window_mse(forecast_mean, data[gan.window_size:], gan.forecasting_horizon)
+    forecast_mse = sliding_window_mse(forecast_mean, data[model.window_size:], model.forecasting_horizon)
 
-    forecast_smape = sliding_window_smape(forecast_mean, data[gan.window_size:], gan.forecasting_horizon)
+    forecast_smape = sliding_window_smape(forecast_mean, data[model.window_size:], model.forecasting_horizon)
 
-    coverage_80_1 = sliding_window_coverage(actual_values=data[gan.window_size:],
+    coverage_80_1 = sliding_window_coverage(actual_values=data[model.window_size:],
                                             upper_limits=np.quantile(forecast, q=0.9, axis=-1),
                                             lower_limits=np.quantile(forecast, q=0.1, axis=-1),
-                                            forecast_horizon=gan.forecasting_horizon)
-    coverage_95_1 = sliding_window_coverage(actual_values=data[gan.window_size:],
+                                            forecast_horizon=model.forecasting_horizon)
+    coverage_95_1 = sliding_window_coverage(actual_values=data[model.window_size:],
                                             upper_limits=np.quantile(forecast, q=0.975, axis=-1),
                                             lower_limits=np.quantile(forecast, q=0.025, axis=-1),
-                                            forecast_horizon=gan.forecasting_horizon)
-    coverage_80_2 = sliding_window_coverage(actual_values=data[gan.window_size:],
+                                            forecast_horizon=model.forecasting_horizon)
+    coverage_80_2 = sliding_window_coverage(actual_values=data[model.window_size:],
                                             upper_limits=forecast_mean + 1.28*total_uncertainty,
                                             lower_limits=forecast_mean - 1.28*total_uncertainty,
-                                            forecast_horizon=gan.forecasting_horizon)
-    coverage_95_2 = sliding_window_coverage(actual_values=data[gan.window_size:],
+                                            forecast_horizon=model.forecasting_horizon)
+    coverage_95_2 = sliding_window_coverage(actual_values=data[model.window_size:],
                                             upper_limits=forecast_mean + 1.96 * total_uncertainty,
                                             lower_limits=forecast_mean - 1.96 * total_uncertainty,
-                                            forecast_horizon=gan.forecasting_horizon)
+                                            forecast_horizon=model.forecasting_horizon)
     width_80_1 = np.quantile(forecast, q=0.9, axis=-1)-np.quantile(forecast, q=0.1, axis=-1)
     width_95_1 = np.quantile(forecast, q=0.975, axis=-1)-np.quantile(forecast, q=0.025, axis=-1)
     width_80_2 = 2*1.28*total_uncertainty
@@ -182,17 +119,17 @@ def test_model(gan, data, validation_mse, plot=True):
         print('95%-prediction interval coverage - Mean:', coverage_95_2.mean(),
               '\n Forecast horizon:', coverage_95_2)
 
-        plot_results(sliding_window_mse(forecast_mean, data[gan.window_size:], gan.forecasting_horizon),
+        plot_results(sliding_window_mse(forecast_mean, data[model.window_size:], model.forecasting_horizon),
                      label='Forecast MSE', title='Mean Squared Forecast Error', y_label='MSE')
-        plot_results(sliding_window_coverage(actual_values=data[gan.window_size:],
+        plot_results(sliding_window_coverage(actual_values=data[model.window_size:],
                                              upper_limits=np.quantile(forecast, q=0.9, axis=-1),
                                              lower_limits=np.quantile(forecast, q=0.1, axis=-1),
-                                             forecast_horizon=gan.forecasting_horizon),
+                                             forecast_horizon=model.forecasting_horizon),
                      label='80% PI coverage',
-                     y2=sliding_window_coverage(actual_values=data[gan.window_size:],
+                     y2=sliding_window_coverage(actual_values=data[model.window_size:],
                                                 upper_limits=np.quantile(forecast, q=0.975, axis=-1),
                                                 lower_limits=np.quantile(forecast, q=0.025, axis=-1),
-                                                forecast_horizon=gan.forecasting_horizon),
+                                                forecast_horizon=model.forecasting_horizon),
                      y2_label='95% PI coverage',
                      title='Prediction Interval Coverage', y_label='Coverage')
 
@@ -205,13 +142,15 @@ def pipeline():
     width_80_1_list, width_95_1_list, width_80_2_list, width_95_2_list = [], [], [], []
     coverage_80_1_list, coverage_95_1_list, coverage_80_2_list, coverage_95_2_list = [], [], [], []
     for i in range(1):
-        gan = configure_model(cfg=cfg['gan'])
-        train, test = load_data(cfg=cfg['data'], window_size=gan.window_size)
-        trained_gan, validation_mse = train_gan(gan=gan, data=train, epochs=cfg['gan']['epochs'],
-                                                batch_size=cfg['gan']['batch_size'], verbose=0)
+        model = configure_model(cfg=cfg)
+        train, test = load_data(cfg=cfg, window_size=model.window_size)
+        start_time = time.time()
+        trained_model, validation_mse = train_model(model=model, data=train, epochs=cfg['epochs'],
+                                                    batch_size=cfg['batch_size'], verbose=0)
+        training_time = time.time() - start_time
         # test_model(gan=trained_gan, data=train, validation_mse=validation_mse, plot=False)
         forecast_mse, forecast_smape, coverage_80_1, coverage_95_1, coverage_80_2, coverage_95_2, width_80_1, \
-            width_95_1, width_80_2, width_95_2, forecast_std = test_model(gan=trained_gan, data=test,
+            width_95_1, width_80_2, width_95_2, forecast_std = test_model(model=trained_model, data=test,
                                                                           validation_mse=validation_mse, plot=False)
         print(forecast_std)
         forecast_mse_list.append(forecast_mse), forecast_smape_list.append(forecast_smape)
@@ -230,6 +169,7 @@ def pipeline():
     print('Forecast MSE:', np.mean(np.array(forecast_mse_list), axis=0))
     print('Mean forecast SMAPE:', np.mean(np.mean(forecast_smape_list, axis=0)))
     print('Forecast SMAPE:', np.mean(np.array(forecast_smape_list), axis=0))
+    print('Training time:', training_time)
 
     print('========================================================'
           '\n================== Model Uncertainty ==================='
@@ -256,18 +196,18 @@ def pipeline():
     print('95%-prediction interval coverage - Mean:', np.mean(np.mean(coverage_95_2_list, axis=0)),
           ', width:', np.mean(width_95_2_list),
           '\n Forecast horizon:', np.mean(np.array(coverage_95_2_list), axis=0))
-    if cfg['gan']['model'].lower() in ['arima', 'es']:
-        file_name = ("test_results/data_" + cfg['data']['data_source'].lower() + "_model_" + cfg['gan']['model'].lower())
+    if cfg['model_name'].lower() in ['arima', 'es']:
+        file_name = ("results/" + cfg['data_source'].lower() + "/" + cfg['model_name'].lower() + "/test_results.txt")
     else:
-        file_name = ("test_results/data_" + cfg['data']['data_source'] .lower() + "_model_" + cfg['gan']['model'].lower() +
-                     "_epochs_%d_D_epochs_%d_batch_size_%d_noise_vec_%d_learning_rate_%f.txt" %
-                     (cfg['gan']['epochs'], cfg['gan']['discriminator_epochs'], cfg['gan']['batch_size'],
-                      cfg['gan']['noise_vector_size'], cfg['gan']['learning_rate']))
+        file_name = ("results/" + cfg['data_source'].lower() + "/" + cfg['model_name'].lower() +
+                     "/Epochs_%d_D_epochs_%d_batch_size_%d_noise_vec_%d_lr_%f/test_results.txt" %
+                     (cfg['epochs'], cfg['discriminator_epochs'], cfg['batch_size'],
+                      cfg['noise_vector_size'], cfg['learning_rate']))
     mse = np.mean(np.array(forecast_mse_list), axis=0)
     smap = np.mean(np.array(forecast_smape_list), axis=0)
     c_80 = np.mean(np.array(coverage_80_1_list), axis=0)
     c_95 = np.mean(np.array(coverage_95_1_list), axis=0)
-    with open(file_name, "w") as f:
+    with open(file_name, "a") as f:
         f.write("mse,smape,coverage_80,coverage_95\n")
         for (mse, smap, c_80, c_95) in zip(mse, smap, c_80, c_95):
             f.write("{0},{1},{2},{3}\n".format(mse, smap, c_80, c_95))

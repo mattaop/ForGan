@@ -23,75 +23,14 @@ config = tf.ConfigProto(intra_op_parallelism_threads=1, inter_op_parallelism_thr
 sess = tf.Session(graph=tf.get_default_graph(), config=config)
 k.set_session(sess)
 
-import matplotlib.pyplot as plt
-from tqdm import tqdm
-from sklearn.metrics import mean_squared_error, mutual_info_score, normalized_mutual_info_score
-from sklearn.preprocessing import StandardScaler, MinMaxScaler
+import time
+
 
 from config.load_config import load_config_file
 from models.get_model import get_gan
+from time_series_pipeline import configure_model, load_data, plot_results, train_model
 from utility.split_data import split_sequence
-from data.generate_sine import generate_sine_data
-from data.load_data import load_oslo_temperature, load_australia_temperature
 from utility.compute_statistics import *
-
-
-def configure_model(cfg):
-    gan = get_gan(cfg)
-    gan.build_model()
-
-    paths = ['ims',
-             'ims/' + gan.plot_folder
-             ]
-    for i in paths:
-        if not os.path.exists(i):
-            os.makedirs(i)
-    return gan
-
-
-def load_data(cfg, window_size):
-    if cfg['data_source'].lower() == 'sine':
-        data = generate_sine_data(num_points=1000)
-    elif cfg['data_source'].lower() == 'oslo':
-        data = load_oslo_temperature()
-    elif cfg['data_source'].lower() == 'australia':
-        data = load_australia_temperature()
-    else:
-        return None
-    print('Data shape', data.shape)
-    train = data[:-int(len(data) * cfg['test_split'])]
-    test = data[-int(len(data) * cfg['test_split'] + window_size):]
-    train, test = scale_data(train, test)
-    return train, test
-
-
-def scale_data(train, test):
-    scaler = MinMaxScaler(feature_range=(10 ** (-10), 1))
-    train = scaler.fit_transform(train)
-    test = scaler.transform(test)
-    return train, test
-
-
-def plot_results(y, label, y2=None, y2_label=None, title='', y_label='Value'):
-    x = np.linspace(1, len(y), len(y))
-    plt.figure()
-    plt.title(title)
-    plt.plot(x, y, label=label)
-    if y2 is not None:
-        plt.plot(x, y2, label=y2_label)
-    plt.ylabel(y_label)
-    plt.xlabel('Forecast horizon')
-    plt.legend()
-    plt.show()
-
-
-def train_gan(gan, data, epochs, batch_size=128, verbose=1):
-    # Split training data into (x_t-l, ..., x_t), (x_t+1) pairs
-    x_train, y_train = split_sequence(data, gan.window_size, gan.output_size)
-
-    history = gan.fit(x_train, y_train, epochs=epochs, batch_size=batch_size, verbose=verbose)
-
-    return gan
 
 
 def test_model(model, data, plot=True):
@@ -121,10 +60,12 @@ def pipeline():
     width_80_list, width_95_list = [], []
     coverage_80_list, coverage_95_list = [], []
     for i in range(1):
-        gan = configure_model(cfg=cfg['gan'])
-        train, test = load_data(cfg=cfg['data'], window_size=gan.window_size)
-        trained_model = train_gan(gan=gan, data=train, epochs=cfg['gan']['epochs'],
-                                  batch_size=cfg['gan']['batch_size'], verbose=1)
+        model = configure_model(cfg=cfg['gan'])
+        train, test = load_data(cfg=cfg['data'], window_size=model.window_size)
+        start_time = time.time()
+        trained_model = train_model(model=model, data=train, epochs=cfg['gan']['epochs'],
+                                    batch_size=cfg['gan']['batch_size'], verbose=1)
+        training_time = time.time() - start_time
         forecast_mse, forecast_smape, coverage_80, coverage_95, width_80,  width_95 = \
             test_model(model=trained_model, data=test, plot=False)
         forecast_mse_list.append(forecast_mse), forecast_smape_list.append(forecast_smape)
@@ -149,10 +90,10 @@ def pipeline():
           ', width:', np.mean(width_95_list),
           '\n Forecast horizon:', np.mean(np.array(coverage_95_list), axis=0))
 
-    if cfg['gan']['model'].lower() in ['arima', 'es']:
-        file_name = ("test_results/data_" + cfg['data']['data_source'].lower() + "_model_" + cfg['gan']['model'].lower())
+    if cfg['gan']['model_name'].lower() in ['arima', 'es']:
+        file_name = ("test_results/data_" + cfg['data']['data_source'].lower() + "_model_" + cfg['gan']['model_name'].lower())
     else:
-        file_name = ("test_results/data_" + cfg['data']['data_source'] .lower() + "_model_" + cfg['gan']['model'].lower() +
+        file_name = ("test_results/data_" + cfg['data']['data_source'] .lower() + "_model_" + cfg['gan']['model_name'].lower() +
                      "_epochs_%d_D_epochs_%d_batch_size_%d_noise_vec_%d_learning_rate_%f.txt" %
                      (cfg['gan']['epochs'], cfg['gan']['discriminator_epochs'], cfg['gan']['batch_size'],
                       cfg['gan']['noise_vector_size'], cfg['gan']['learning_rate']))
