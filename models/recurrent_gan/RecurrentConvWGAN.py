@@ -50,18 +50,16 @@ class RecurrentConvWGAN(RecurrentWGAN):
         # define the constraint
         const = ClipConstraint(0.1)
 
-        x = Conv1D(32, kernel_size=4, kernel_constraint=const)(x)
+        x = Conv1D(self.discriminator_nodes, kernel_size=4, kernel_constraint=const)(x)
         x = LeakyReLU(alpha=0.1)(x)
         # x = BatchNormalization()(x)
         # x = Dropout(0.2)(x)
         x = MaxPooling1D(pool_size=2)(x)
         x = Flatten()(x)
         # x = LeakyReLU(alpha=0.2)(x)
-        # x = Dense(64, kernel_constraint=const)(x)
-        # x = LeakyReLU(alpha=0.1)(x)
-        # x = Dense(32, kernel_constraint=const)(x)
+        x = Dense(self.discriminator_nodes, kernel_constraint=const)(x)
+        x = LeakyReLU(alpha=0.1)(x)
 
-        # x = LeakyReLU(alpha=0.1)(x)
         validity = Dense(1)(x)
 
         model = Model(inputs=[historic_inp, future_inp], outputs=validity)

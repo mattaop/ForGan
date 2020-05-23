@@ -76,13 +76,13 @@ class RecurrentGAN(GAN):
         noise_inp = Input(shape=noise_shape)
         historic_inp = Input(shape=historic_shape)
 
-        hist = SimpleRNN(16, return_sequences=False)(historic_inp)
-        # hist = LSTM(16, return_sequences=False)(historic_inp)
-        # hist = GRU(8, return_sequences=False)(historic_inp)
+        hist = SimpleRNN(self.generator_nodes, return_sequences=False)(historic_inp)
+        # hist = LSTM(self.generator_nodes, return_sequences=False)(historic_inp)
+        # hist = GRU(self.generator_nodes, return_sequences=False)(historic_inp)
 
         x = Concatenate(axis=1)([hist, noise_inp])
         # x = BatchNormalization()(x)
-        x = Dense(16+self.noise_vector_size)(x)
+        x = Dense(self.generator_nodes+self.noise_vector_size)(x)
         x = ReLU()(x)
         # x = Dense(16)(x)
         # x = ReLU()(x)
@@ -102,10 +102,11 @@ class RecurrentGAN(GAN):
 
         x = Concatenate(axis=1)([historic_inp, future_inp])
 
-        x = SimpleRNN(64, return_sequences=False)(x)
-        # x = GRU(64, return_sequences=False)(x)
+        x = SimpleRNN(self.discriminator_nodes, return_sequences=False)(x)
+        # x = GRU(self.discriminator_nodes, return_sequences=False)(x)
+        x = BatchNormalization()(x)
         # x = LeakyReLU(alpha=0.2)(x)
-        x = Dense(64)(x)
+        x = Dense(self.discriminator_nodes)(x)
         x = LeakyReLU(alpha=0.1)(x)
         # x = Dropout(0.2)(x)
         # x = Dense(32)(x)
@@ -117,6 +118,17 @@ class RecurrentGAN(GAN):
         model.summary()
 
         return model
+
+    def train_generator_on_batch(self, x, batch_size):
+        generator_noise = self._generate_noise(batch_size)
+        idx = np.random.randint(0, x.shape[0], batch_size)
+        historic_time_series = x[idx]
+
+        valid_y = np.array([1] * batch_size)
+
+        # Train the generator
+        g_loss = self.combined.train_on_batch([historic_time_series, generator_noise], valid_y)
+        return g_loss
 
     def fit(self, x, y, x_val=None, y_val=None, epochs=1, batch_size=32, verbose=1):
         half_batch = int(batch_size / 2)
@@ -154,18 +166,7 @@ class RecurrentGAN(GAN):
             # ---------------------
             #  Train Generator
             # ---------------------
-            generator_noise = self._generate_noise(batch_size)
-
-            # The generator wants the discriminator to label the generated samples
-            # as valid (ones)
-
-            idx = np.random.randint(0, x.shape[0], batch_size)
-            historic_time_series = x[idx]
-
-            valid_y = np.array([1] * batch_size)
-
-            # Train the generator
-            g_loss = self.combined.train_on_batch([historic_time_series, generator_noise], valid_y)
+            g_loss = self.train_generator_on_batch(x, batch_size)
 
             # Measure forecast MSE of generator
             forecast_mse[epoch] = mean_squared_error(future_time_series[:, :, 0], gen_forecasts)

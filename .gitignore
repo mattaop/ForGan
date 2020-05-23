@@ -5,4 +5,5 @@ ims/
 venv/
 config/paths.yml
 data_files/
-result_folder/
+test_results/
+training_results/

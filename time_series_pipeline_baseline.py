@@ -149,6 +149,22 @@ def pipeline():
           ', width:', np.mean(width_95_list),
           '\n Forecast horizon:', np.mean(np.array(coverage_95_list), axis=0))
 
+    if cfg['gan']['model'].lower() in ['arima', 'es']:
+        file_name = ("test_results/data_" + cfg['data']['data_source'].lower() + "_model_" + cfg['gan']['model'].lower())
+    else:
+        file_name = ("test_results/data_" + cfg['data']['data_source'] .lower() + "_model_" + cfg['gan']['model'].lower() +
+                     "_epochs_%d_D_epochs_%d_batch_size_%d_noise_vec_%d_learning_rate_%f.txt" %
+                     (cfg['gan']['epochs'], cfg['gan']['discriminator_epochs'], cfg['gan']['batch_size'],
+                      cfg['gan']['noise_vector_size'], cfg['gan']['learning_rate']))
+    mse = np.mean(np.array(forecast_mse_list), axis=0)
+    smap = np.mean(np.array(forecast_smape_list), axis=0)
+    c_80 = np.mean(np.array(coverage_80_list), axis=0)
+    c_95 = np.mean(np.array(coverage_95_list), axis=0)
+    with open(file_name, "w") as f:
+        f.write("mse,smape,coverage_80,coverage_95\n")
+        for (mse, smap, c_80, c_95) in zip(mse, smap, c_80, c_95):
+            f.write("{0},{1},{2},{3}\n".format(mse, smap, c_80, c_95))
+
 
 if __name__ == '__main__':
     pipeline()

@@ -38,10 +38,10 @@ class RecurrentWGAN(RecurrentGAN, WGAN):
         # define the constraint
         const = ClipConstraint(0.1)
 
-        x = SimpleRNN(64, return_sequences=False, kernel_constraint=const)(x)
+        x = SimpleRNN(self.discriminator_nodes, return_sequences=False, kernel_constraint=const)(x)
         # x = BatchNormalization()(x)
         # x = LeakyReLU(alpha=0.2)(x)
-        x = Dense(64, kernel_constraint=const)(x)
+        x = Dense(self.discriminator_nodes, kernel_constraint=const)(x)
         x = LeakyReLU(alpha=0.1)(x)
         validity = Dense(1)(x)
 

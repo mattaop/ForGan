@@ -5,8 +5,10 @@ gan:
   epochs: 1500
   batch_size: 64
   learning_rate: 0.001
-  discriminator_epochs: 10
+  discriminator_epochs: 3
 
+  generator_nodes: 16
+  discriminator_nodes: 64
   noise_vector_size: 50
   noise_type: gaussian # gaussian (standard), uniform
 

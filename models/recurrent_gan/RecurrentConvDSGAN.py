@@ -21,7 +21,7 @@ class RecurrentConvDSGAN(RecurrentDSGAN):
 
         # define the constraint
 
-        x = Conv1D(32, kernel_size=4)(x)
+        x = Conv1D(self.discriminator_nodes, kernel_size=4)(x)
         x = LeakyReLU(alpha=0.1)(x)
         # x = BatchNormalization()(x)
         # x = Dropout(0.2)(x)
@@ -33,7 +33,7 @@ class RecurrentConvDSGAN(RecurrentDSGAN):
         # x = MaxPooling1D(pool_size=2)(x)
         x = Flatten()(x)
         # x = LeakyReLU(alpha=0.2)(x)
-        x = Dense(32)(x)
+        x = Dense(self.discriminator_nodes)(x)
         x = LeakyReLU(alpha=0.1)(x)
         validity = Dense(1, activation='sigmoid')(x)
 
