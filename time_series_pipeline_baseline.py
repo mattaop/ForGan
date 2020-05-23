@@ -60,11 +60,11 @@ def pipeline():
     width_80_list, width_95_list = [], []
     coverage_80_list, coverage_95_list = [], []
     for i in range(1):
-        model = configure_model(cfg=cfg['gan'])
-        train, test = load_data(cfg=cfg['data'], window_size=model.window_size)
+        model = configure_model(cfg=cfg)
+        train, test = load_data(cfg=cfg, window_size=model.window_size)
         start_time = time.time()
-        trained_model = train_model(model=model, data=train, epochs=cfg['gan']['epochs'],
-                                    batch_size=cfg['gan']['batch_size'], verbose=1)
+        trained_model = train_model(model=model, data=train, epochs=cfg['epochs'],
+                                    batch_size=cfg['batch_size'], verbose=1)
         training_time = time.time() - start_time
         forecast_mse, forecast_smape, coverage_80, coverage_95, width_80,  width_95 = \
             test_model(model=trained_model, data=test, plot=False)
@@ -91,13 +91,13 @@ def pipeline():
           ', width:', np.mean(width_95_list),
           '\n Forecast horizon:', np.mean(np.array(coverage_95_list), axis=0))
 
-    if cfg['gan']['model_name'].lower() in ['arima', 'es']:
-        file_name = ("test_results/data_" + cfg['data']['data_source'].lower() + "_model_" + cfg['gan']['model_name'].lower())
+    if cfg['model_name'].lower() in ['arima', 'es']:
+        file_name = ("results/" + cfg['data_source'].lower() + "/" + cfg['model_name'].lower() + "/test_results.txt")
     else:
-        file_name = ("test_results/data_" + cfg['data']['data_source'] .lower() + "_model_" + cfg['gan']['model_name'].lower() +
-                     "_epochs_%d_D_epochs_%d_batch_size_%d_noise_vec_%d_learning_rate_%f.txt" %
-                     (cfg['gan']['epochs'], cfg['gan']['discriminator_epochs'], cfg['gan']['batch_size'],
-                      cfg['gan']['noise_vector_size'], cfg['gan']['learning_rate']))
+        file_name = ("results/" + cfg['data_source'].lower() + "/" + cfg['model_name'].lower() +
+                     "/Epochs_%d_D_epochs_%d_batch_size_%d_noise_vec_%d_lr_%f/test_results.txt" %
+                     (cfg['epochs'], cfg['discriminator_epochs'], cfg['batch_size'],
+                      cfg['noise_vector_size'], cfg['learning_rate']))
     mse = np.mean(np.array(forecast_mse_list), axis=0)
     smap = np.mean(np.array(forecast_smape_list), axis=0)
     c_80 = np.mean(np.array(coverage_80_list), axis=0)

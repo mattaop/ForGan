@@ -38,8 +38,10 @@ class RecurrentGAN(GAN):
         self.loss_function = 'binary_crossentropy'
 
     def build_model(self):
-        print('=== Config===', '\nNoise vector size:', self.noise_vector_size, '\nDiscriminator epochs:',
-              self.discriminator_epochs, '\nOptimizer:', self.optimizer)
+        print('=== Config===', '\nModel name:', self.model_name, '\nNoise vector size:', self.noise_vector_size,
+              '\nDiscriminator epochs:', self.discriminator_epochs, '\n Generator nodes', self.generator_nodes,
+              '\nDiscriminator nodes:', self.discriminator_nodes, '\nOptimizer:', self.optimizer,
+              '\nLearning rate:', self.learning_rate)
         # Build and compile the discriminator
         self.discriminator = self.build_discriminator()
         self.discriminator.compile(loss=self.loss_function, optimizer=self.optimizer, metrics=['accuracy'])

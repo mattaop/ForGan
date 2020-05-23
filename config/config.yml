@@ -1,14 +1,14 @@
 model_name: RecurrentGAN # RNN, ES, ARIMA, GAN, ConvGAN, RecurrentGAN, RecurrentConvGAN, RecurrentConvDSGAN
 loss_function: kl # kl, w, ds
 
-epochs: 10
+epochs: 1500
 batch_size: 64
 learning_rate: 0.001
 discriminator_epochs: 1
 
 generator_nodes: 16
 discriminator_nodes: 64
-noise_vector_size: 50
+noise_vector_size: 100
 noise_type: gaussian # gaussian (standard), uniform
 
 window_size: 24
@@ -21,7 +21,7 @@ print_coverage: True # True, False, Will slow down training, but print coverage 
 save_model_interval: 100
 
 data_source: sine # sine, oslo, australia
-test_split: 0.6
+test_split: 0.5
 
 cross_validation_setup:
   k-folds: 5

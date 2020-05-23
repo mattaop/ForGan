@@ -31,7 +31,7 @@ from sklearn.metrics import mean_squared_error, mutual_info_score, normalized_mu
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 import seaborn as sns
 
-from config.load_config import load_config_file
+from config.load_config import load_config_file, write_config_file
 from models.get_model import get_gan
 from utility.split_data import split_sequence
 from data.generate_sine import generate_sine_data
@@ -42,18 +42,28 @@ from utility.compute_statistics import *
 def configure_model(cfg):
     gan = get_gan(cfg)
     gan.build_model()
-
-    paths = ['ims',
-             'ims/' + gan.plot_folder,
-             "results/" + cfg['data_source'].lower() + "/" + cfg['model_name'].lower() +
-             "/Epochs_%d_D_epochs_%d_batch_size_%d_noise_vec_%d_lr_%f" %
-             (cfg['epochs'], cfg['discriminator_epochs'], cfg['batch_size'], cfg['noise_vector_size'],
-              cfg['learning_rate'])
-             ]
+    if cfg['model_name'].lower() in ['es', 'arima']:
+        paths = ['ims',
+                 'ims/' + gan.plot_folder,
+                 "results/" + cfg['data_source'].lower() + "/" + cfg['model_name'].lower()
+                 ]
+    else:
+        paths = ['ims',
+                 'ims/' + gan.plot_folder,
+                 "results/" + cfg['data_source'].lower() + "/" + cfg['model_name'].lower() +
+                 "/Epochs_%d_D_epochs_%d_batch_size_%d_noise_vec_%d_lr_%f" %
+                 (cfg['epochs'], cfg['discriminator_epochs'], cfg['batch_size'], cfg['noise_vector_size'],
+                  cfg['learning_rate'])
+                 ]
     for i in paths:
         if not os.path.exists(i):
             os.makedirs(i)
             print('Creating path:', i)
+    if cfg['model_name'].lower() not in ['es', 'arima']:
+        write_config_file("results/" + cfg['data_source'].lower() + "/" + cfg['model_name'].lower() +
+                          "/Epochs_%d_D_epochs_%d_batch_size_%d_noise_vec_%d_lr_%f" %
+                          (cfg['epochs'], cfg['discriminator_epochs'], cfg['batch_size'], cfg['noise_vector_size'],
+                           cfg['learning_rate']) + "/config.yml", cfg)
     return gan
 
 
@@ -104,8 +114,7 @@ def train_model(model, data, epochs, batch_size=64, verbose=1):
 
 
 def test_model(model, data, plot=True):
-    forecast = model.monte_carlo_forecast(data,
-                                        steps=int(len(data) - model.window_size), plot=plot)  # steps x horizon x mc_forward_passes
+    forecast = model.monte_carlo_forecast(data, steps=int(len(data) - model.window_size), plot=plot)  # steps x horizon x mc_forward_passes
     forecast_mean = forecast.mean(axis=-1)
     forecast_std = forecast.std(axis=-1)
 
@@ -228,10 +237,12 @@ def pipeline():
     smap = np.mean(np.array(forecast_smape_list), axis=0)
     c_80 = np.mean(np.array(coverage_80_1_list), axis=0)
     c_95 = np.mean(np.array(coverage_95_1_list), axis=0)
+    w_80 = np.mean(np.array(width_80_1_list), axis=0)
+    w_95 = np.mean(np.array(width_95_1_list), axis=0)
     with open(file_name, "a") as f:
-        f.write("mse,smape,coverage_80,coverage_95\n")
-        for (mse, smap, c_80, c_95) in zip(mse, smap, c_80, c_95):
-            f.write("{0},{1},{2},{3}\n".format(mse, smap, c_80, c_95))
+        f.write("mse,smape,coverage_80,coverage_95,width_80,width_95\n")
+        for (mse, smap, c_80, c_95, w_80, w_95) in zip(mse, smap, c_80, c_95, w_80, w_95):
+            f.write("{0},{1},{2},{3}\n".format(mse, smap, c_80, c_95, w_80, w_95))
 
 
 if __name__ == '__main__':
