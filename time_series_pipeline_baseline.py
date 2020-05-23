@@ -79,6 +79,7 @@ def pipeline():
     print('Forecast MSE:', np.mean(np.array(forecast_mse_list), axis=0))
     print('Mean forecast SMAPE:', np.mean(np.mean(forecast_smape_list, axis=0)))
     print('Forecast SMAPE:', np.mean(np.array(forecast_smape_list), axis=0))
+    print('Training time:', training_time)
 
     print('========================================================'
           '\n================== Model Uncertainty ==================='
