@@ -69,7 +69,7 @@ def configure_model(cfg):
 
 def load_data(cfg, window_size):
     if cfg['data_source'].lower() == 'sine':
-        data = generate_sine_data(num_points=100, plot=False)
+        data = generate_sine_data(num_points=5000, plot=False)
     elif cfg['data_source'].lower() == 'oslo':
         data = load_oslo_temperature()
     elif cfg['data_source'].lower() == 'australia':

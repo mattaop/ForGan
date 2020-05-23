@@ -8,7 +8,7 @@ discriminator_epochs: 1
 
 generator_nodes: 16
 discriminator_nodes: 64
-noise_vector_size: 100
+noise_vector_size: 50
 noise_type: gaussian # gaussian (standard), uniform
 
 window_size: 24
