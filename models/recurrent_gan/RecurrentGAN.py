@@ -37,6 +37,8 @@ class RecurrentGAN(GAN):
         self.loss_function = 'binary_crossentropy'
 
     def build_model(self):
+        print('=== Config===', '\nNoise vector size:', self.noise_vector_size, '\nDiscriminator epochs:',
+              self.discriminator_epochs, '\nOptimizer:', self.optimizer)
         # Build and compile the discriminator
         self.discriminator = self.build_discriminator()
         self.discriminator.compile(loss=self.loss_function, optimizer=self.optimizer, metrics=['accuracy'])
@@ -80,10 +82,10 @@ class RecurrentGAN(GAN):
 
         x = Concatenate(axis=1)([hist, noise_inp])
         # x = BatchNormalization()(x)
-        x = Dense(32)(x)
+        x = Dense(16+self.noise_vector_size)(x)
         x = ReLU()(x)
-        x = Dense(16)(x)
-        x = ReLU()(x)
+        # x = Dense(16)(x)
+        # x = ReLU()(x)
         prediction = Dense(self.output_size)(x)
 
         model = Model(inputs=[historic_inp, noise_inp], outputs=prediction)
@@ -100,15 +102,15 @@ class RecurrentGAN(GAN):
 
         x = Concatenate(axis=1)([historic_inp, future_inp])
 
-        x = SimpleRNN(128, dropout=0.1, return_sequences=False)(x)
+        x = SimpleRNN(64, return_sequences=False)(x)
         # x = GRU(64, return_sequences=False)(x)
         # x = LeakyReLU(alpha=0.2)(x)
         x = Dense(64)(x)
         x = LeakyReLU(alpha=0.1)(x)
-        x = Dropout(0.2)(x)
-        x = Dense(32)(x)
-        x = LeakyReLU(alpha=0.1)(x)
-        x = Dropout(0.2)(x)
+        # x = Dropout(0.2)(x)
+        # x = Dense(32)(x)
+        # x = LeakyReLU(alpha=0.1)(x)
+        # x = Dropout(0.2)(x)
         validity = Dense(1, activation='sigmoid')(x)
 
         model = Model(inputs=[historic_inp, future_inp], outputs=validity)
@@ -121,6 +123,9 @@ class RecurrentGAN(GAN):
         forecast_mse = np.zeros(epochs)
         G_loss = np.zeros(epochs)
         D_loss = np.zeros(epochs)
+        coverage_80_pi = []
+        coverage_95_pi = []
+        validation_mse = []
 
         for epoch in range(epochs):
 
@@ -164,8 +169,7 @@ class RecurrentGAN(GAN):
 
             # Measure forecast MSE of generator
             forecast_mse[epoch] = mean_squared_error(future_time_series[:, :, 0], gen_forecasts)
-            # kl_divergence[epoch] = sum(self.kl_divergence(future_time_series[:, i, 0], gen_forecasts[:, i])
-            #                           for i in range(self.forecasting_horizon))/self.forecasting_horizon
+
             G_loss[epoch] = g_loss
             D_loss[epoch] = d_loss[0]
             # Print the progress
@@ -180,40 +184,45 @@ class RecurrentGAN(GAN):
                         x_input = np.vstack([np.expand_dims(historic_time_series[j], axis=0)] * 100)
 
                         forecasts[j] = self.generator.predict([x_input, generator_noise]).transpose()
-                    coverage_80_pi = compute_coverage(actual_values=future_time_series[:, :, 0],
-                                                      upper_limits=np.quantile(forecasts, q=0.9, axis=-1),
-                                                      lower_limits=np.quantile(forecasts, q=0.1, axis=-1))
-                    coverage_95_pi = compute_coverage(actual_values=future_time_series[:, :, 0],
-                                                      upper_limits=np.quantile(forecasts, q=0.975, axis=-1),
-                                                      lower_limits=np.quantile(forecasts, q=0.025, axis=-1))
+                    coverage_80_pi.append(compute_coverage(actual_values=future_time_series[:, :, 0],
+                                                           upper_limits=np.quantile(forecasts, q=0.9, axis=-1),
+                                                           lower_limits=np.quantile(forecasts, q=0.1, axis=-1)))
+                    coverage_95_pi.append(compute_coverage(actual_values=future_time_series[:, :, 0],
+                                                           upper_limits=np.quantile(forecasts, q=0.975, axis=-1),
+                                                           lower_limits=np.quantile(forecasts, q=0.025, axis=-1)))
+                    validation_mse.append(mean_squared_error(future_time_series[:, :, 0], np.mean(forecasts, axis=-1)))
 
                     print("%d [D loss: %f, acc.: %.2f%%] [G loss: %f, forecast mse: %f][Mean forecast mse: %f, "
                           "80%%-PI: %.2f%%, 95%%-PI: %.2f%%]" %
                           (epoch, d_loss[0], 100 * d_loss[1], g_loss, forecast_mse[epoch],
-                           mean_squared_error(future_time_series[:, :, 0], np.mean(forecasts, axis=-1)),
-                           100*coverage_80_pi, 100*coverage_95_pi))
+                           validation_mse[-1], 100*coverage_80_pi[-1], 100*coverage_95_pi[-1]))
                 elif self.print_coverage and (x_val is not None) and (y_val is not None):
                     forecasts = np.zeros([len(y_val), self.output_size, 100])
                     for j in range(len(y_val)):
                         generator_noise = self._generate_noise(100)
                         x_input = np.vstack([np.expand_dims(x_val[j], axis=0)] * 100)
                         forecasts[j] = self.generator.predict([x_input, generator_noise]).transpose()
-                    coverage_80_pi = compute_coverage(actual_values=y_val,
-                                                      upper_limits=np.quantile(forecasts, q=0.9, axis=-1),
-                                                      lower_limits=np.quantile(forecasts, q=0.1, axis=-1))
-                    coverage_95_pi = compute_coverage(actual_values=y_val,
-                                                      upper_limits=np.quantile(forecasts, q=0.975, axis=-1),
-                                                      lower_limits=np.quantile(forecasts, q=0.025, axis=-1))
-
+                    coverage_80_pi.append(compute_coverage(actual_values=y_val,
+                                                           upper_limits=np.quantile(forecasts, q=0.9, axis=-1),
+                                                           lower_limits=np.quantile(forecasts, q=0.1, axis=-1)))
+                    coverage_95_pi.append(compute_coverage(actual_values=y_val,
+                                                           upper_limits=np.quantile(forecasts, q=0.975, axis=-1),
+                                                           lower_limits=np.quantile(forecasts, q=0.025, axis=-1)))
+                    validation_mse.append(mean_squared_error(y_val[:, 0], np.mean(forecasts, axis=-1)))
                     print("%d [D loss: %f, acc.: %.2f%%] [G loss: %f, forecast mse: %f][Validation mse: %f, "
                           "80%%-PI: %.2f%%, 95%%-PI: %.2f%%]" %
                           (epoch, d_loss[0], 100 * d_loss[1], g_loss, forecast_mse[epoch],
-                           mean_squared_error(y_val[:, 0], np.mean(forecasts, axis=-1)),
-                           100 * coverage_80_pi, 100 * coverage_95_pi))
+                           validation_mse[-1], 100 * coverage_80_pi[-1], 100 * coverage_95_pi[-1]))
                 else:
                     print("%d [D loss: %f, acc.: %.2f%%] [G loss: %f, forecast mse: %f]" %
                           (epoch, d_loss[0], 100 * (d_loss[1]), g_loss, forecast_mse[epoch]))
-
+        if self.print_coverage:
+            file_name = ("training_results/Epochs_%d_D_epochs_%d_batch_size_%d_noise_vec_%d.txt" %
+                         (epochs, self.discriminator_epochs, batch_size, self.noise_vector_size))
+            with open(file_name, "w") as f:
+                f.write("mse,coverage_80,coverage_95\n")
+                for (validation_mse, coverage_80_pi, coverage_95_pi) in zip(validation_mse, coverage_80_pi, coverage_95_pi):
+                    f.write("{0},{1},{2}\n".format(validation_mse, coverage_80_pi, coverage_95_pi))
         return {'mse': forecast_mse, 'G_loss': G_loss, 'D_loss': D_loss, 'Accuracy': 100 * d_loss[1]}
 
     def forecast(self, x):
@@ -286,7 +295,6 @@ if __name__ == '__main__':
         gan.train(epochs=200, batch_size=32)
         predictions = gan.monte_carlo_forecast(generate_noise(5000))[0, 0]
         prediction_mean = predictions.mean(axis=0)
-        print(predictions.shape)
         uncertainty = predictions.std(axis=0)
         kl_div.append(gan.compute_kl_divergence(predictions, generate_noise(5000)))
         js_div.append(gan.compute_js_divergence(predictions, generate_noise(5000)))

@@ -14,15 +14,15 @@ def compute_coverage(upper_limits, lower_limits, actual_values):
 def sliding_window_coverage(upper_limits, lower_limits, actual_values, forecast_horizon):
     coverage = np.zeros(forecast_horizon)
     for i in range(forecast_horizon):
-        coverage[i] = compute_coverage(upper_limits[:len(actual_values)-i, i], lower_limits[:len(actual_values)-i, i],
+        coverage[i] = compute_coverage(upper_limits[:-i or None, i], lower_limits[:-i or None, i],
                                        actual_values[i:, 0])
     return coverage
 
 
-def sliding_window_mse(forecast_mean, actual_values, forecast_horizon):
+def sliding_window_mse(forecast, actual_values, forecast_horizon):
     mse = np.zeros(forecast_horizon)
     for i in range(forecast_horizon):
-        mse[i] = mean_squared_error(actual_values[i:, 0], forecast_mean[:len(actual_values)-i, i])
+        mse[i] = mean_squared_error(actual_values[i:].flatten(), forecast[:-i or None, i].flatten())
     return mse
 
 
@@ -33,10 +33,10 @@ def smape(y_true, y_pred):
     return 2*100 * np.mean(diff)
 
 
-def sliding_window_smape(forecast_mean, actual_values, forecast_horizon):
+def sliding_window_smape(forecast, actual_values, forecast_horizon):
     f_smape = np.zeros(forecast_horizon)
     for i in range(forecast_horizon):
-        f_smape[i] = smape(actual_values[i:, 0], forecast_mean[:len(actual_values)-i, i])
+        f_smape[i] = smape(actual_values[i:].flatten(), forecast[:-i or None, i].flatten())
     return f_smape
 
 

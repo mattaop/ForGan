@@ -49,7 +49,7 @@ def configure_model(cfg):
 
 def load_data(cfg, window_size):
     if cfg['data_source'].lower() == 'sine':
-        data = generate_sine_data(num_points=1000, plot=False)
+        data = generate_sine_data(num_points=2000, plot=False)
     elif cfg['data_source'].lower() == 'oslo':
         data = load_oslo_temperature()
     elif cfg['data_source'].lower() == 'australia':
@@ -256,6 +256,21 @@ def pipeline():
     print('95%-prediction interval coverage - Mean:', np.mean(np.mean(coverage_95_2_list, axis=0)),
           ', width:', np.mean(width_95_2_list),
           '\n Forecast horizon:', np.mean(np.array(coverage_95_2_list), axis=0))
+    if cfg['gan']['model'].lower() in ['arima', 'es']:
+        file_name = ("test_results/data_" + cfg['data']['data_source'].lower() + "_model_" + cfg['gan']['model'].lower())
+    else:
+        file_name = ("test_results/data_" + cfg['data']['data_source'] .lower() + "_model_" + cfg['gan']['model'].lower() +
+                     "_epochs_%d_D_epochs_%d_batch_size_%d_noise_vec_%d_learning_rate_%f.txt" %
+                     (cfg['gan']['epochs'], cfg['gan']['discriminator_epochs'], cfg['gan']['batch_size'],
+                      cfg['gan']['noise_vector_size'], cfg['gan']['learning_rate']))
+    mse = np.mean(np.array(forecast_mse_list), axis=0)
+    smape = np.mean(np.array(forecast_smape_list), axis=0)
+    c_80 = np.mean(np.array(coverage_80_1_list), axis=0)
+    c_95 = np.mean(np.array(coverage_95_1_list), axis=0)
+    with open(file_name, "w") as f:
+        f.write("mse,smape,coverage_80,coverage_95\n")
+        for (mse, smape, c_80, c_95) in zip(mse, smape, c_80, c_95):
+            f.write("{0},{1},{2},{3}\n".format(mse, smape, c_80, c_95))
 
 
 if __name__ == '__main__':

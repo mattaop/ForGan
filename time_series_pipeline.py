@@ -51,7 +51,7 @@ def configure_model(cfg):
 
 def load_data(cfg, window_size):
     if cfg['data_source'].lower() == 'sine':
-        data = generate_sine_data(num_points=1000)
+        data = generate_sine_data(num_points=2000)
     elif cfg['data_source'].lower() == 'oslo':
         data = load_oslo_temperature()
     elif cfg['data_source'].lower() == 'australia':
@@ -85,7 +85,7 @@ def plot_results(y, label, y2=None, y2_label=None, title='', y_label='Value'):
     plt.show()
 
 
-def train_gan(gan, data, epochs, batch_size=128, verbose=1):
+def train_gan(gan, data, epochs, batch_size=64, verbose=1):
     # Split training data into (x_t-l, ..., x_t), (x_t+1) pairs
     x_train, y_train = split_sequence(data, gan.window_size, gan.output_size)
 
@@ -99,7 +99,6 @@ def test_model(gan, data, plot=True):
                                         steps=int(len(data) - gan.window_size), plot=plot)  # steps x horizon x mc_forward_passes
     forecast_mean = forecast.mean(axis=-1)
     forecast_std = forecast.std(axis=-1)
-    forecast_var = forecast.var(axis=-1)
 
     if plot:
         x_pred = np.linspace(gan.window_size + 1, len(data), len(data) - gan.window_size)
@@ -154,7 +153,7 @@ def test_model(gan, data, plot=True):
                                                 forecast_horizon=gan.forecasting_horizon),
                      y2_label='95% PI coverage',
                      title='Prediction Interval Coverage', y_label='Coverage')
-    return forecast_mse, forecast_smape, coverage_80_1, coverage_95_1, coverage_80_2, coverage_95_2, width_80_1, width_95_1, width_80_2, width_95_2
+    return forecast_mse, forecast_smape, coverage_80_1, coverage_95_1, coverage_80_2, coverage_95_2, width_80_1, width_95_1, width_80_2, width_95_2, forecast_std.mean(axis=0)
 
 
 def pipeline():
@@ -162,18 +161,20 @@ def pipeline():
     forecast_mse_list, forecast_smape_list = [], []
     width_80_1_list, width_95_1_list, width_80_2_list, width_95_2_list = [], [], [], []
     coverage_80_1_list, coverage_95_1_list, coverage_80_2_list, coverage_95_2_list = [], [], [], []
+    forecast_std_list = []
     for i in range(1):
         gan = configure_model(cfg=cfg['gan'])
         train, test = load_data(cfg=cfg['data'], window_size=gan.window_size)
         trained_gan = train_gan(gan=gan, data=train, epochs=cfg['gan']['epochs'],
                                 batch_size=cfg['gan']['batch_size'], verbose=1)
         forecast_mse, forecast_smape, coverage_80_1, coverage_95_1, coverage_80_2, coverage_95_2, width_80_1, \
-            width_95_1, width_80_2, width_95_2 = test_model(gan=trained_gan, data=test, plot=False)
+            width_95_1, width_80_2, width_95_2, forecast_std = test_model(gan=trained_gan, data=test, plot=False)
         forecast_mse_list.append(forecast_mse), forecast_smape_list.append(forecast_smape)
         coverage_80_1_list.append(coverage_80_1), coverage_95_1_list.append(coverage_95_1)
         coverage_80_2_list.append(coverage_80_2), coverage_95_2_list.append(coverage_95_2)
         width_80_1_list.append(width_80_1), width_95_1_list.append(width_95_1)
         width_80_2_list.append(width_80_2), width_95_2_list.append(width_95_2)
+        forecast_std_list.append(forecast_std)
 
     print('========================================================'
           '\n================ Point Forecast Metrics ================'
@@ -182,6 +183,7 @@ def pipeline():
     print('Forecast MSE:', np.mean(np.array(forecast_mse_list), axis=0))
     print('Mean forecast SMAPE:', np.mean(np.mean(forecast_smape_list, axis=0)))
     print('Forecast SMAPE:', np.mean(np.array(forecast_smape_list), axis=0))
+    print('Estimated standard deviation:', np.mean(np.mean(forecast_std_list, axis=0)))
 
     print('========================================================'
           '\n================== Model Uncertainty ==================='
@@ -202,6 +204,22 @@ def pipeline():
     print('95%-prediction interval coverage - Mean:', np.mean(np.mean(coverage_95_2_list, axis=0)),
           ', width:', np.mean(width_95_2_list),
           '\n Forecast horizon:', np.mean(np.array(coverage_95_2_list), axis=0))
+
+    if cfg['gan']['model'].lower() in ['arima', 'es']:
+        file_name = ("test_results/data_" + cfg['data']['data_source'].lower() + "_model_" + cfg['gan']['model'].lower())
+    else:
+        file_name = ("test_results/data_" + cfg['data']['data_source'] .lower() + "_model_" + cfg['gan']['model'].lower() +
+                     "_epochs_%d_D_epochs_%d_batch_size_%d_noise_vec_%d_learning_rate_%f.txt" %
+                     (cfg['gan']['epochs'], cfg['gan']['discriminator_epochs'], cfg['gan']['batch_size'],
+                      cfg['gan']['noise_vector_size'], cfg['gan']['learning_rate']))
+    mse = np.mean(np.array(forecast_mse_list), axis=0)
+    smap = np.mean(np.array(forecast_smape_list), axis=0)
+    c_80 = np.mean(np.array(coverage_80_1_list), axis=0)
+    c_95 = np.mean(np.array(coverage_95_1_list), axis=0)
+    with open(file_name, "w") as f:
+        f.write("mse,smape,coverage_80,coverage_95\n")
+        for (mse, smap, c_80, c_95) in zip(mse, smap, c_80, c_95):
+            f.write("{0},{1},{2},{3}\n".format(mse, smap, c_80, c_95))
 
 
 if __name__ == '__main__':
