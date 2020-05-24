@@ -103,8 +103,8 @@ def test_model(model, data, validation_mse, plot=True):
                                             forecast_horizon=model.forecasting_horizon)
     width_80_1 = np.mean(np.quantile(forecast, q=0.9, axis=-1)-np.quantile(forecast, q=0.1, axis=-1), axis=0)
     width_95_1 = np.mean(np.quantile(forecast, q=0.975, axis=-1)-np.quantile(forecast, q=0.025, axis=-1), axis=0)
-    width_80_2 = 2*1.28*total_uncertainty
-    width_95_2 = 2*1.96*total_uncertainty
+    width_80_2 =2*1.28* np.mean(total_uncertainty, axis=0)
+    width_95_2 = 2*1.96* np.mean(total_uncertainty, axis=0)
     print(coverage_80_1.shape)
     print(width_80_1.shape)
     if plot:

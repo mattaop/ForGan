@@ -38,7 +38,9 @@ class RNN:
         input_shape = (self.window_size, 1)
         inp = Input(shape=input_shape)
 
-        x = SimpleRNN(64, return_sequences=False)(inp)
+        # x = SimpleRNN(64, return_sequences=False)(inp)
+        x = LSTM(64, return_sequences=False)(inp)
+
         x = Dropout(0.4)(x)
         x = Dense(64, activation='relu')(x)
         x = Dropout(0.4)(x)
@@ -64,10 +66,9 @@ class RNN:
 
         return {'mse': history.history['loss'], 'G_loss': None, 'D_loss': None, 'Accuracy': None}
 
-    def fit(self, x, y, epochs=1, batch_size=32, verbose=2):
+    def fit(self, x, y, x_val=None, y_val=None, epochs=1, batch_size=32, verbose=2):
         # Load the data
-        history = self.model.fit(x, y[:, :, 0], epochs=epochs, batch_size=batch_size, validation_split=0.1,
-                                 verbose=verbose)
+        history = self.model.fit(x, y[:, :, 0], epochs=epochs, batch_size=batch_size, verbose=verbose)
         return history
 
     def forecast(self, x):

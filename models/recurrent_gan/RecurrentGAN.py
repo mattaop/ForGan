@@ -5,9 +5,11 @@ from sklearn.metrics import mean_squared_error
 from keras import Model
 from keras.layers import *
 from keras.optimizers import Adam
+import keras.backend as K
 from keras.models import load_model
 import tensorflow as tf
 from tqdm import tqdm
+import time
 
 from config.load_config import load_config_file
 from data.generate_noise import generate_noise
@@ -29,9 +31,10 @@ class RecurrentGAN(GAN):
             self.output_size = 1
         else:
             self.output_size = self.forecasting_horizon
-
+        self.new_training_loop = cfg['new_training_loop']
         self.noise_vector_size = cfg['noise_vector_size']
         self.discriminator_epochs = cfg['discriminator_epochs']
+        self.mixed_batches = cfg['mixed_batches']
         self.mc_forward_passes = cfg['mc_forward_passes']
 
         self.optimizer = Adam(cfg['learning_rate'], 0.5)
@@ -39,7 +42,7 @@ class RecurrentGAN(GAN):
 
     def build_model(self):
         print('=== Config===', '\nModel name:', self.model_name, '\nNoise vector size:', self.noise_vector_size,
-              '\nDiscriminator epochs:', self.discriminator_epochs, '\n Generator nodes', self.generator_nodes,
+              '\nDiscriminator epochs:', self.discriminator_epochs, '\nGenerator nodes', self.generator_nodes,
               '\nDiscriminator nodes:', self.discriminator_nodes, '\nOptimizer:', self.optimizer,
               '\nLearning rate:', self.learning_rate)
         # Build and compile the discriminator
@@ -106,6 +109,7 @@ class RecurrentGAN(GAN):
         x = Concatenate(axis=1)([historic_inp, future_inp])
 
         x = SimpleRNN(self.discriminator_nodes, return_sequences=False)(x)
+        # x = LSTM(self.discriminator_nodes, return_sequences=False)(x)
         # x = GRU(self.discriminator_nodes, return_sequences=False)(x)
         x = BatchNormalization()(x)
         # x = LeakyReLU(alpha=0.2)(x)
@@ -122,6 +126,32 @@ class RecurrentGAN(GAN):
 
         return model
 
+    def find_training_mask(self, half_batch):
+        mask = np.empty(self.discriminator_epochs * half_batch * 2, dtype=int)
+
+        if self.discriminator_epochs > 1:
+            """
+            for i in range(0, self.discriminator_epochs, 2):
+                print(i * half_batch * 2, i * half_batch * 2 + 2 * half_batch, i * half_batch, i * half_batch + 2 * half_batch)
+                mask[i * half_batch * 2:i * half_batch * 2 + 2 * half_batch] = np.arange(i * half_batch,
+                                                                                         i * half_batch + 2 * half_batch,
+                                                                                         dtype=int)
+                print((i + 1) * half_batch * 2, (i + 1) * half_batch * 2 + 2 * half_batch, self.discriminator_epochs * half_batch + i * half_batch,
+                              self.discriminator_epochs * half_batch + i * half_batch + 2 * half_batch)
+                mask[(i + 1) * half_batch * 2:(i + 1) * half_batch * 2 + 2 * half_batch] = \
+                    np.arange(self.discriminator_epochs * half_batch + i * half_batch,
+                              self.discriminator_epochs * half_batch + i * half_batch + 2 * half_batch, dtype=int)
+            """
+            for i in range(self.discriminator_epochs):
+                mask[i * half_batch*2:i * half_batch*2 + half_batch] = \
+                    np.arange(i * half_batch, i * half_batch + half_batch, dtype=int)
+                mask[(2*i + 1) * half_batch:(2*i + 1) * half_batch + half_batch] = \
+                    np.arange(self.discriminator_epochs * half_batch + i * half_batch,
+                              self.discriminator_epochs * half_batch + i * half_batch + half_batch, dtype=int)
+        else:
+            mask = np.arange(0, 2 * half_batch, dtype=int)
+        return mask
+
     def train_generator_on_batch(self, x, batch_size):
         generator_noise = self._generate_noise(batch_size)
         idx = np.random.randint(0, x.shape[0], batch_size)
@@ -133,38 +163,75 @@ class RecurrentGAN(GAN):
         g_loss = self.combined.train_on_batch([historic_time_series, generator_noise], valid_y)
         return g_loss
 
+    def train_discriminator_on_batch(self, x, y, half_batch, mask):
+        # Select a random half batch of images
+        idx = np.random.randint(0, x.shape[0], self.discriminator_epochs*half_batch)
+        historic_time_series = x[idx]
+        future_time_series = y[idx]
+
+        generator_noise = self._generate_noise(self.discriminator_epochs*half_batch)
+
+        # Generate a half batch of new images
+        gen_forecasts = self.generator.predict([historic_time_series, generator_noise])
+        hist_input = np.concatenate([historic_time_series, historic_time_series], axis=0)
+        future_input = np.concatenate([future_time_series,  np.expand_dims(gen_forecasts, axis=-1)], axis=0)
+        y_input = np.concatenate([self._get_labels(batch_size=self.discriminator_epochs*half_batch, real=True),
+                                  self._get_labels(batch_size=self.discriminator_epochs*half_batch, real=False)],
+                                 axis=0)
+        if self.mixed_batches:
+            random_mask = np.arange(self.discriminator_epochs*half_batch*2)
+            np.random.shuffle(random_mask)
+            hist_input = hist_input[random_mask]
+            future_input = future_input[random_mask]
+            y_input = y_input[random_mask]
+        else:
+            hist_input = hist_input[mask]
+            future_input = future_input[mask]
+            y_input = y_input[mask]
+
+        # Train the discriminator
+        d_loss = self.discriminator.fit([hist_input, future_input], y_input, epochs=1, batch_size=half_batch,
+                                        shuffle=False, verbose=0)
+        return [np.mean(d_loss.history['loss']), np.mean(d_loss.history['acc'])]
+
     def fit(self, x, y, x_val=None, y_val=None, epochs=1, batch_size=32, verbose=1):
         half_batch = int(batch_size / 2)
         forecast_mse = np.zeros(epochs)
         G_loss = np.zeros(epochs)
         D_loss = np.zeros(epochs)
+        training_mask = self.find_training_mask(half_batch)
         coverage_80_pi = []
         coverage_95_pi = []
         validation_mse = []
-
         for epoch in range(epochs):
 
             # ---------------------
             #  Train Discriminator
             # ---------------------
-            for d_epochs in range(max(1, self.discriminator_epochs)):
-                # Select a random half batch of images
-                idx = np.random.randint(0, x.shape[0], half_batch)
-                historic_time_series = x[idx]
-                future_time_series = y[idx]
+            if not self.new_training_loop:
+                for d_epochs in range(max(1, self.discriminator_epochs)):
+                    # Select a random half batch of images
+                    idx = np.random.randint(0, x.shape[0], half_batch)
+                    historic_time_series = x[idx]
+                    future_time_series = y[idx]
 
-                generator_noise = self._generate_noise(half_batch)
+                    generator_noise = self._generate_noise(half_batch)
 
-                # Generate a half batch of new images
-                gen_forecasts = self.generator.predict([historic_time_series, generator_noise])
+                    # Generate a half batch of new images
+                    gen_forecasts = self.generator.predict([historic_time_series, generator_noise])
 
-                # Train the discriminator
-                d_loss_real = self.discriminator.train_on_batch([historic_time_series, future_time_series],
-                                                                self._get_labels(batch_size=half_batch, real=True))
-                d_loss_fake = self.discriminator.train_on_batch([historic_time_series,
-                                                                tf.keras.backend.expand_dims(gen_forecasts, axis=-1)],
-                                                                self._get_labels(batch_size=half_batch, real=False))
-                d_loss = 0.5 * np.add(d_loss_real, d_loss_fake)
+                    # Train the discriminator
+                    start_time = time.time()
+                    d_loss_real = self.discriminator.train_on_batch([historic_time_series, future_time_series],
+                                                                    self._get_labels(batch_size=half_batch, real=True))
+                    d_loss_fake = self.discriminator.train_on_batch([historic_time_series,
+                                                                    tf.keras.backend.expand_dims(gen_forecasts, axis=-1)],
+                                                                    self._get_labels(batch_size=half_batch, real=False))
+
+                    d_loss = 0.5 * np.add(d_loss_real, d_loss_fake)
+
+            else:
+                d_loss = self.train_discriminator_on_batch(x, y, half_batch, training_mask)
 
             # ---------------------
             #  Train Generator
@@ -172,7 +239,7 @@ class RecurrentGAN(GAN):
             g_loss = self.train_generator_on_batch(x, batch_size)
 
             # Measure forecast MSE of generator
-            forecast_mse[epoch] = mean_squared_error(future_time_series[:, :, 0], gen_forecasts)
+            # forecast_mse[epoch] = mean_squared_error(future_time_series[:, :, 0], gen_forecasts)
 
             G_loss[epoch] = g_loss
             D_loss[epoch] = d_loss[0]
