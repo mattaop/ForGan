@@ -12,7 +12,7 @@ def generate_sine_data(num_points=2000, plot=False):
     std = 0.1
     noise = np.random.normal(mean, std, num_points)
 
-    y = np.sin(x*np.pi/6)/(scipy.stats.norm.ppf(0.75)*2) + noise
+    y = np.sin(x*np.pi/6)/(scipy.stats.norm.ppf(0.75)*std*1+1) + noise
     if plot:
         plt.hist(noise, color='blue', edgecolor='black',
                  bins=int(50), density=True)
@@ -22,9 +22,14 @@ def generate_sine_data(num_points=2000, plot=False):
         plt.axvline(noise.mean(), color='b', linewidth=1)
         plt.show()
     print('Noise standard deviation:', noise.std())
+    """
+    plt.figure()
+    plt.plot(x, y)
+    plt.show()
+    """
 
     return np.expand_dims(y, axis=-1)
 
 
 if __name__ == '__main__':
-    print(generate_sine_data(500))
+    generate_sine_data(200)
