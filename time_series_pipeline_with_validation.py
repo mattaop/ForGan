@@ -105,8 +105,6 @@ def test_model(model, data, validation_mse, cfg, plot=True, file_name="/test_res
     width_95_1 = np.mean(np.quantile(forecast, q=0.975, axis=-1)-np.quantile(forecast, q=0.025, axis=-1), axis=0)
     width_80_2 = 2*1.28 * np.mean(total_uncertainty, axis=0)
     width_95_2 = 2*1.96 * np.mean(total_uncertainty, axis=0)
-    print(coverage_80_1.shape)
-    print(width_80_1.shape)
     if plot:
         print('Width 80:', np.mean(width_80_1), ', width 95:', np.mean(width_95_1))
 
@@ -135,26 +133,26 @@ def test_model(model, data, validation_mse, cfg, plot=True, file_name="/test_res
                      y2_label='95% PI coverage',
                      title='Prediction Interval Coverage', y_label='Coverage')
 
-        file_path = cfg['results_path'] + file_name
+    file_path = cfg['results_path'] + file_name
 
-        mse = np.mean(forecast_mse, axis=0)
-        smap = np.mean(forecast_smape, axis=0)
-        std = np.mean(forecast_std, axis=0)
-        if cfg['model_name'].lower() == 'rnn':
-            c_80 = np.mean(coverage_80_2, axis=0)
-            c_95 = np.mean(coverage_95_2, axis=0)
-            w_80 = np.mean(width_80_2, axis=0)
-            w_95 = np.mean(width_95_2, axis=0)
-        else:
-            c_80 = np.mean(coverage_80_1, axis=0)
-            c_95 = np.mean(coverage_95_1, axis=0)
-            w_80 = np.mean(width_80_1, axis=0)
-            w_95 = np.mean(width_95_1, axis=0)
+    mse = forecast_mse
+    smap = forecast_smape
+    std = np.mean(forecast_std, axis=0)
+    if cfg['model_name'].lower() == 'rnn':
+        c_80 = coverage_80_2
+        c_95 = coverage_95_2
+        w_80 = width_80_2
+        w_95 = width_95_2
+    else:
+        c_80 = coverage_80_1
+        c_95 = coverage_95_1
+        w_80 = width_80_1
+        w_95 = width_95_1
 
-        with open(file_path, "a") as f:
-            f.write("mse,smape,std,coverage_80,coverage_95,width_80,width_95\n")
-            for (mse, smap, std, c_80, c_95, w_80, w_95) in zip(mse, smap, std, c_80, c_95, w_80, w_95):
-                f.write("{0},{1},{2},{3},{4},{5},{6}\n".format(mse, smap, std, c_80, c_95, w_80, w_95))
+    with open(file_path, "a") as f:
+        f.write("mse,smape,std,coverage_80,coverage_95,width_80,width_95\n")
+        for (mse, smap, std, c_80, c_95, w_80, w_95) in zip(mse, smap, std, c_80, c_95, w_80, w_95):
+            f.write("{0},{1},{2},{3},{4},{5},{6}\n".format(mse, smap, std, c_80, c_95, w_80, w_95))
 
     return forecast_mse, forecast_smape, coverage_80_1, coverage_95_1, coverage_80_2, coverage_95_2, width_80_1, width_95_1, width_80_2, width_95_2, forecast_std.mean(axis=0)
 

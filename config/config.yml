@@ -4,7 +4,7 @@ loss_function: kl # kl, w, ds
 epochs: 1500
 batch_size: 32
 learning_rate: 0.001
-discriminator_epochs: 1
+discriminator_epochs: 2
 
 layers: rnn  # rnn, lstm, gru
 generator_nodes: 16

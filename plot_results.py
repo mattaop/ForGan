@@ -74,12 +74,12 @@ def plot_test_results(model_paths, file_labels, title, save_file='Test'):
 
 
 def main():
-    noise_paths = ['results/sine/recurrentgan/Epochs_4000_D_epochs_3_batch_size_64_noise_vec_1_lr_0.001000',
-                   'results/sine/recurrentgan/Epochs_4000_D_epochs_3_batch_size_64_noise_vec_5_lr_0.001000',
-                   'results/sine/recurrentgan/Epochs_4000_D_epochs_3_batch_size_64_noise_vec_10_lr_0.001000',
-                   'results/sine/recurrentgan/Epochs_4000_D_epochs_3_batch_size_64_noise_vec_25_lr_0.001000',
-                   'results/sine/recurrentgan/Epochs_4000_D_epochs_3_batch_size_64_noise_vec_50_lr_0.001000',
-                   'results/sine/recurrentgan/Epochs_4000_D_epochs_3_batch_size_64_noise_vec_100_lr_0.001000']
+    noise_paths = ['results/sine/recurrentgan/rnn_epochs_1500_D_epochs_3_batch_size_32_noise_vec_1_gnodes_16_dnodes_64_loss_kl_lr_0.001000',
+                   'results/sine/recurrentgan/rnn_epochs_1500_D_epochs_3_batch_size_32_noise_vec_5_gnodes_16_dnodes_64_loss_kl_lr_0.001000',
+                   'results/sine/recurrentgan/rnn_epochs_1500_D_epochs_3_batch_size_32_noise_vec_10_gnodes_16_dnodes_64_loss_kl_lr_0.001000',
+                   'results/sine/recurrentgan/rnn_epochs_1500_D_epochs_3_batch_size_32_noise_vec_25_gnodes_16_dnodes_64_loss_kl_lr_0.001000',
+                   'results/sine/recurrentgan/rnn_epochs_1500_D_epochs_3_batch_size_32_noise_vec_50_gnodes_16_dnodes_64_loss_kl_lr_0.001000',
+                   'results/sine/recurrentgan/rnn_epochs_1500_D_epochs_3_batch_size_32_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.001000']
     noise_label = ['Noise vector = 1', 'Noise vector = 5', 'Noise vector = 10', 'Noise vector = 25',
                    'Noise vector = 50', 'Noise vector = 100']
 
@@ -106,8 +106,8 @@ def main():
                         'results/sine/recurrentgan/rnn_epochs_1500_D_epochs_5_batch_size_256_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.001000',]
     batch_size_labels = ['Batch size = 16', 'Batch size = 32', 'Batch size = 64', 'Batch size = 128', 'Batch size = 256']
 
-    model_paths = batch_size_paths
-    labels = batch_size_labels
+    model_paths = noise_paths
+    labels = noise_label
     plot_training_results(model_paths=model_paths,
                           file_labels=labels,
                           save_file='sine_batch_size',
