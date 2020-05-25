@@ -49,9 +49,9 @@ def compute_validation_error(model, data):
     return validation_mse
 
 
-def train_model(model, data, epochs, batch_size=128, verbose=1):
+def train_model(model, data, epochs, cfg, batch_size=128, verbose=1):
     # Split data in training and validation set
-    train, val = data[:-int(len(data)*0.1)], data[-int(model.window_size+len(data)*0.1):]
+    train, val = data[:-int(len(data)*cfg['val_split'])], data[-int(model.window_size+len(data)*cfg['val_split']):]
 
     # Split training data into (x_t-l, ..., x_t), (x_t+1) pairs
     x_train, y_train = split_sequence(train, model.window_size, model.output_size)
@@ -60,10 +60,10 @@ def train_model(model, data, epochs, batch_size=128, verbose=1):
 
     validation_mse = compute_validation_error(model, val)
 
-    return model, validation_mse
+    return model, validation_mse, val
 
 
-def test_model(model, data, validation_mse, plot=True):
+def test_model(model, data, validation_mse, cfg, plot=True, file_name="/test_results.txt"):
     forecast = model.monte_carlo_forecast(data, steps=int(len(data)-model.window_size), plot=plot)  # steps x horizon x mc_forward_passes
     forecast_mean = forecast.mean(axis=-1)
     forecast_std = forecast.std(axis=-1)
@@ -103,8 +103,8 @@ def test_model(model, data, validation_mse, plot=True):
                                             forecast_horizon=model.forecasting_horizon)
     width_80_1 = np.mean(np.quantile(forecast, q=0.9, axis=-1)-np.quantile(forecast, q=0.1, axis=-1), axis=0)
     width_95_1 = np.mean(np.quantile(forecast, q=0.975, axis=-1)-np.quantile(forecast, q=0.025, axis=-1), axis=0)
-    width_80_2 =2*1.28* np.mean(total_uncertainty, axis=0)
-    width_95_2 = 2*1.96* np.mean(total_uncertainty, axis=0)
+    width_80_2 = 2*1.28 * np.mean(total_uncertainty, axis=0)
+    width_95_2 = 2*1.96 * np.mean(total_uncertainty, axis=0)
     print(coverage_80_1.shape)
     print(width_80_1.shape)
     if plot:
@@ -135,6 +135,27 @@ def test_model(model, data, validation_mse, plot=True):
                      y2_label='95% PI coverage',
                      title='Prediction Interval Coverage', y_label='Coverage')
 
+        file_path = cfg['results_path'] + file_name
+
+        mse = np.mean(forecast_mse, axis=0)
+        smap = np.mean(forecast_smape, axis=0)
+        std = np.mean(forecast_std, axis=0)
+        if cfg['model_name'].lower() == 'rnn':
+            c_80 = np.mean(coverage_80_2, axis=0)
+            c_95 = np.mean(coverage_95_2, axis=0)
+            w_80 = np.mean(width_80_2, axis=0)
+            w_95 = np.mean(width_95_2, axis=0)
+        else:
+            c_80 = np.mean(coverage_80_1, axis=0)
+            c_95 = np.mean(coverage_95_1, axis=0)
+            w_80 = np.mean(width_80_1, axis=0)
+            w_95 = np.mean(width_95_1, axis=0)
+
+        with open(file_path, "a") as f:
+            f.write("mse,smape,std,coverage_80,coverage_95,width_80,width_95\n")
+            for (mse, smap, std, c_80, c_95, w_80, w_95) in zip(mse, smap, std, c_80, c_95, w_80, w_95):
+                f.write("{0},{1},{2},{3},{4},{5},{6}\n".format(mse, smap, std, c_80, c_95, w_80, w_95))
+
     return forecast_mse, forecast_smape, coverage_80_1, coverage_95_1, coverage_80_2, coverage_95_2, width_80_1, width_95_1, width_80_2, width_95_2, forecast_std.mean(axis=0)
 
 
@@ -147,13 +168,16 @@ def pipeline():
         model = configure_model(cfg=cfg)
         train, test = load_data(cfg=cfg, window_size=model.window_size)
         start_time = time.time()
-        trained_model, validation_mse = train_model(model=model, data=train, epochs=cfg['epochs'],
-                                                    batch_size=cfg['batch_size'], verbose=0)
+        trained_model, validation_mse, val = train_model(model=model, data=train, epochs=cfg['epochs'], cfg=cfg,
+                                                         batch_size=cfg['batch_size'], verbose=0)
         training_time = time.time() - start_time
-        # test_model(gan=trained_gan, data=train, validation_mse=validation_mse, plot=False)
+        test_model(model=trained_model, data=val, validation_mse=validation_mse, cfg=cfg, plot=False,
+                   file_name="/validation_results.txt")
         forecast_mse, forecast_smape, coverage_80_1, coverage_95_1, coverage_80_2, coverage_95_2, width_80_1, \
             width_95_1, width_80_2, width_95_2, forecast_std = test_model(model=trained_model, data=test,
-                                                                          validation_mse=validation_mse, plot=False)
+                                                                          validation_mse=validation_mse, cfg=cfg,
+                                                                          plot=False, file_name="/test_results.txt")
+
         forecast_mse_list.append(forecast_mse), forecast_smape_list.append(forecast_smape)
         validation_mse_list.append(validation_mse)
         forecast_std_list.append(forecast_std)
@@ -196,32 +220,6 @@ def pipeline():
     print('95%-prediction interval coverage - Mean:', np.mean(np.mean(coverage_95_2_list, axis=0)),
           ', width:', np.mean(width_95_2_list),
           '\n Forecast horizon:', np.mean(np.array(coverage_95_2_list), axis=0))
-
-    if cfg['model_name'].lower() in ['arima', 'es']:
-        file_name = ("results/" + cfg['data_source'].lower() + "/" + cfg['model_name'].lower() + "/test_results.txt")
-    else:
-        file_name = ("results/" + cfg['data_source'].lower() + "/" + cfg['model_name'].lower() +
-                     "/Epochs_%d_D_epochs_%d_batch_size_%d_noise_vec_%d_lr_%f/test_results.txt" %
-                     (cfg['epochs'], cfg['discriminator_epochs'], cfg['batch_size'],
-                      cfg['noise_vector_size'], cfg['learning_rate']))
-    mse = np.mean(np.array(forecast_mse_list), axis=0)
-    smap = np.mean(np.array(forecast_smape_list), axis=0)
-    std = np.mean(forecast_std_list, axis=0)
-    if cfg['model_name'].lower() == 'rnn':
-        c_80 = np.mean(np.array(coverage_80_2_list), axis=0)
-        c_95 = np.mean(np.array(coverage_95_2_list), axis=0)
-        w_80 = np.mean(np.array(width_80_2_list), axis=0)
-        w_95 = np.mean(np.array(width_95_2_list), axis=0)
-    else:
-        c_80 = np.mean(np.array(coverage_80_1_list), axis=0)
-        c_95 = np.mean(np.array(coverage_95_1_list), axis=0)
-        w_80 = np.mean(np.array(width_80_1_list), axis=0)
-        w_95 = np.mean(np.array(width_95_1_list), axis=0)
-
-    with open(file_name, "a") as f:
-        f.write("mse,smape,std,coverage_80,coverage_95,width_80,width_95\n")
-        for (mse, smap, std, c_80, c_95, w_80, w_95) in zip(mse, smap, std, c_80, c_95, w_80, w_95):
-            f.write("{0},{1},{2},{3},{4},{5},{6}\n".format(mse, smap, std, c_80, c_95, w_80, w_95))
 
 
 if __name__ == '__main__':

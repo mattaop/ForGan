@@ -23,6 +23,7 @@ class GAN:
         self.plot_folder = 'feed_forward_GAN'
         self.save_model_interval = cfg['save_model_interval']
         self.data_source = cfg['data_source'].lower()
+        self.results_path = cfg['results_path']
 
         self.generator_nodes = cfg['generator_nodes']
         self.discriminator_nodes = cfg['discriminator_nodes']
@@ -30,6 +31,7 @@ class GAN:
         self.noise_type = cfg['noise_type']  # normal, uniform
         self.discriminator_epochs = cfg['discriminator_epochs']
 
+        self.batch_norm = cfg['batch_norm']
         self.learning_rate = cfg['learning_rate']
         self.optimizer = Adam(lr=self.learning_rate, beta_1=0.5)
         self.discriminator_loss = binary_crossentropy

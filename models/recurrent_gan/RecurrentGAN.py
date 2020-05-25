@@ -37,6 +37,7 @@ class RecurrentGAN(GAN):
         self.mixed_batches = cfg['mixed_batches']
         self.mc_forward_passes = cfg['mc_forward_passes']
 
+        self.layers = cfg['layers']
         self.optimizer = Adam(cfg['learning_rate'], 0.5)
         self.loss_function = 'binary_crossentropy'
 
@@ -82,9 +83,12 @@ class RecurrentGAN(GAN):
         noise_inp = Input(shape=noise_shape)
         historic_inp = Input(shape=historic_shape)
 
-        hist = SimpleRNN(self.generator_nodes, return_sequences=False)(historic_inp)
-        # hist = LSTM(self.generator_nodes, return_sequences=False)(historic_inp)
-        # hist = GRU(self.generator_nodes, return_sequences=False)(historic_inp)
+        if self.layers == 'lstm':
+            hist = LSTM(self.generator_nodes, return_sequences=False)(historic_inp)
+        elif self.layers == 'gru':
+            hist = GRU(self.generator_nodes, return_sequences=False)(historic_inp)
+        else:
+            hist = SimpleRNN(self.generator_nodes, return_sequences=False)(historic_inp)
 
         x = Concatenate(axis=1)([hist, noise_inp])
         # x = BatchNormalization()(x)
@@ -108,10 +112,15 @@ class RecurrentGAN(GAN):
 
         x = Concatenate(axis=1)([historic_inp, future_inp])
 
-        x = SimpleRNN(self.discriminator_nodes, return_sequences=False)(x)
-        # x = LSTM(self.discriminator_nodes, return_sequences=False)(x)
-        # x = GRU(self.discriminator_nodes, return_sequences=False)(x)
-        x = BatchNormalization()(x)
+        if self.layers == 'lstm':
+            x = LSTM(self.discriminator_nodes, return_sequences=False)(x)
+        elif self.layers == 'gru':
+            x = GRU(self.discriminator_nodes, return_sequences=False)(x)
+        else:
+            x = SimpleRNN(self.discriminator_nodes, return_sequences=False)(x)
+
+        if self.batch_norm:
+            x = BatchNormalization()(x)
         # x = LeakyReLU(alpha=0.2)(x)
         x = Dense(self.discriminator_nodes)(x)
         x = LeakyReLU(alpha=0.1)(x)
@@ -288,18 +297,10 @@ class RecurrentGAN(GAN):
                     print("%d [D loss: %f, acc.: %.2f%%] [G loss: %f, forecast mse: %f]" %
                           (epoch, d_loss[0], 100 * (d_loss[1]), g_loss, forecast_mse[epoch]))
             if (epoch+1) % self.save_model_interval == 0:
-                self.discriminator.save("results/" + self.data_source + "/" + self.model_name +
-                                        "/Epochs_%d_D_epochs_%d_batch_size_%d_noise_vec_%d_lr_%f/discriminator_%d.h5" %
-                                        (epochs, self.discriminator_epochs, batch_size, self.noise_vector_size,
-                                         self.learning_rate,  epoch+1))
-                self.generator.save("results/" + self.data_source + "/" + self.model_name +
-                                    "/Epochs_%d_D_epochs_%d_batch_size_%d_noise_vec_%d_lr_%f/generator_%d.h5" %
-                                    (epochs, self.discriminator_epochs, batch_size, self.noise_vector_size,
-                                     self.learning_rate, epoch+1))
+                self.discriminator.save(self.results_path + "/discriminator_%d.h5" % (epoch+1))
+                self.generator.save(self.results_path + "/generator_%d.h5" % (epoch+1))
         if self.print_coverage:
-            file_name = ("results/" + self.data_source + "/" + self.model_name +
-                         "/Epochs_%d_D_epochs_%d_batch_size_%d_noise_vec_%d_lr_%f/training_results.txt" %
-                         (epochs, self.discriminator_epochs, batch_size, self.noise_vector_size, self.learning_rate))
+            file_name = self.results_path + "/training_results.txt"
             with open(file_name, "a") as f:
                 f.write("mse,coverage_80,coverage_95\n")
                 for (validation_mse, coverage_80_pi, coverage_95_pi) in zip(validation_mse, coverage_80_pi, coverage_95_pi):

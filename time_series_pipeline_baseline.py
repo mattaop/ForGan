@@ -91,13 +91,7 @@ def pipeline():
           ', width:', np.mean(width_95_list),
           '\n Forecast horizon:', np.mean(np.array(coverage_95_list), axis=0))
 
-    if cfg['model_name'].lower() in ['arima', 'es']:
-        file_name = ("results/" + cfg['data_source'].lower() + "/" + cfg['model_name'].lower() + "/test_results.txt")
-    else:
-        file_name = ("results/" + cfg['data_source'].lower() + "/" + cfg['model_name'].lower() +
-                     "/Epochs_%d_D_epochs_%d_batch_size_%d_noise_vec_%d_lr_%f/test_results.txt" %
-                     (cfg['epochs'], cfg['discriminator_epochs'], cfg['batch_size'],
-                      cfg['noise_vector_size'], cfg['learning_rate']))
+    file_name = cfg['results_path'] + "/test_results.txt"
     mse = np.mean(np.array(forecast_mse_list), axis=0)
     smap = np.mean(np.array(forecast_smape_list), axis=0)
     c_80 = np.mean(np.array(coverage_80_list), axis=0)

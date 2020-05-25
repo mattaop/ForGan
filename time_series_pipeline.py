@@ -24,7 +24,6 @@ sess = tf.Session(graph=tf.get_default_graph(), config=config)
 k.set_session(sess)
 
 import time
-import time
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 from sklearn.metrics import mean_squared_error, mutual_info_score, normalized_mutual_info_score
@@ -42,28 +41,16 @@ from utility.compute_statistics import *
 def configure_model(cfg):
     gan = get_gan(cfg)
     gan.build_model()
-    if cfg['model_name'].lower() in ['es', 'arima']:
-        paths = ['ims',
-                 'ims/' + gan.plot_folder,
-                 "results/" + cfg['data_source'].lower() + "/" + cfg['model_name'].lower()
-                 ]
-    else:
-        paths = ['ims',
-                 'ims/' + gan.plot_folder,
-                 "results/" + cfg['data_source'].lower() + "/" + cfg['model_name'].lower() +
-                 "/Epochs_%d_D_epochs_%d_batch_size_%d_noise_vec_%d_lr_%f" %
-                 (cfg['epochs'], cfg['discriminator_epochs'], cfg['batch_size'], cfg['noise_vector_size'],
-                  cfg['learning_rate'])
-                 ]
+    paths = ['ims',
+             'ims/' + gan.plot_folder,
+             cfg['results_path']
+             ]
     for i in paths:
         if not os.path.exists(i):
             os.makedirs(i)
             print('Creating path:', i)
     if cfg['model_name'].lower() not in ['es', 'arima']:
-        write_config_file("results/" + cfg['data_source'].lower() + "/" + cfg['model_name'].lower() +
-                          "/Epochs_%d_D_epochs_%d_batch_size_%d_noise_vec_%d_lr_%f" %
-                          (cfg['epochs'], cfg['discriminator_epochs'], cfg['batch_size'], cfg['noise_vector_size'],
-                           cfg['learning_rate']) + "/config.yml", cfg)
+        write_config_file(cfg['results_path'] + "/config.yml", cfg)
     return gan
 
 
@@ -80,7 +67,8 @@ def load_data(cfg, window_size):
     print('Data shape', data.shape)
     train = data[:-int(len(data)*cfg['test_split'])]
     test = data[-int(len(data)*cfg['test_split']+window_size):]
-    train, test = scale_data(train, test)
+    if not cfg['data_source'].lower() == 'sine':
+        train, test = scale_data(train, test)
     return train, test
 
 
@@ -226,13 +214,7 @@ def pipeline():
           ', width:', np.mean(width_95_2_list),
           '\n Forecast horizon:', np.mean(np.array(coverage_95_2_list), axis=0))
 
-    if cfg['model_name'].lower() in ['arima', 'es']:
-        file_name = ("results/" + cfg['data_source'].lower() + "/" + cfg['model_name'].lower() + "/test_results.txt")
-    else:
-        file_name = ("results/" + cfg['data_source'].lower() + "/" + cfg['model_name'].lower() +
-                     "/Epochs_%d_D_epochs_%d_batch_size_%d_noise_vec_%d_lr_%f/test_results.txt" %
-                     (cfg['epochs'], cfg['discriminator_epochs'], cfg['batch_size'],
-                      cfg['noise_vector_size'], cfg['learning_rate']))
+    file_name = cfg['results_path'] + "/test_results.txt"
     mse = np.mean(np.array(forecast_mse_list), axis=0)
     smap = np.mean(np.array(forecast_smape_list), axis=0)
     c_80 = np.mean(np.array(coverage_80_1_list), axis=0)
