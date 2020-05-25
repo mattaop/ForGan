@@ -137,13 +137,14 @@ def test_model(model, data, validation_mse, cfg, plot=True, file_name="/test_res
 
     mse = forecast_mse
     smap = forecast_smape
-    std = np.mean(forecast_std, axis=0)
     if cfg['model_name'].lower() == 'rnn':
+        std = total_uncertainty.mean(axis=0)
         c_80 = coverage_80_2
         c_95 = coverage_95_2
         w_80 = width_80_2
         w_95 = width_95_2
     else:
+        std = np.mean(forecast_std, axis=0)
         c_80 = coverage_80_1
         c_95 = coverage_95_1
         w_80 = width_80_1
