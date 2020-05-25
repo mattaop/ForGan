@@ -79,7 +79,8 @@ def main():
                    'results/sine/recurrentgan/rnn_epochs_1500_D_epochs_3_batch_size_32_noise_vec_10_gnodes_16_dnodes_64_loss_kl_lr_0.001000',
                    'results/sine/recurrentgan/rnn_epochs_1500_D_epochs_3_batch_size_32_noise_vec_25_gnodes_16_dnodes_64_loss_kl_lr_0.001000',
                    'results/sine/recurrentgan/rnn_epochs_1500_D_epochs_3_batch_size_32_noise_vec_50_gnodes_16_dnodes_64_loss_kl_lr_0.001000',
-                   'results/sine/recurrentgan/rnn_epochs_1500_D_epochs_3_batch_size_32_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.001000']
+                   'results/sine/recurrentgan/rnn_epochs_1500_D_epochs_3_batch_size_32_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.001000'
+                   ]
     noise_label = ['Noise vector = 1', 'Noise vector = 5', 'Noise vector = 10', 'Noise vector = 25',
                    'Noise vector = 50', 'Noise vector = 100']
 
@@ -93,11 +94,13 @@ def main():
                       # 'results/sine/recurrentgan/Epochs_1500_D_epochs_50_batch_size_64_noise_vec_50_lr_0.001000'
                       ]
     d_epochs_label = ['D$_{epochs}=1$',
-                      # 'D$_{epochs}=2$',
+                      'D$_{epochs}=2$',
                       'D$_{epochs}=3$',
                       'D$_{epochs}=5$',
                       'D$_{epochs}=10$',
-                      # 'D$_{epochs}=15$', 'D$_{epochs}=20$', 'D$_{epochs}=50$'
+                      # 'D$_{epochs}=15$',
+                      'D$_{epochs}=20$',
+                      # 'D$_{epochs}=50$'
                       ]
     batch_size_paths = ['results/sine/recurrentgan/rnn_epochs_1500_D_epochs_5_batch_size_16_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.001000',
                         'results/sine/recurrentgan/rnn_epochs_1500_D_epochs_5_batch_size_32_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.001000',
@@ -106,11 +109,13 @@ def main():
                         'results/sine/recurrentgan/rnn_epochs_1500_D_epochs_5_batch_size_256_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.001000',]
     batch_size_labels = ['Batch size = 16', 'Batch size = 32', 'Batch size = 64', 'Batch size = 128', 'Batch size = 256']
 
+    save_file_as = 'sine_noise_vec'
+
     model_paths = noise_paths
     labels = noise_label
     plot_training_results(model_paths=model_paths,
                           file_labels=labels,
-                          save_file='sine_batch_size',
+                          save_file=save_file_as,
                           title=['Training Mean Squared Error',
                                  'Training 80% Prediction Interval Coverage',
                                  'Training 95% Prediction Interval Coverage'],
@@ -126,14 +131,14 @@ def main():
     #           'ForGAN']
     plot_validation_results(model_paths=model_paths,
                             file_labels=labels,
-                            save_file='sine_batch_size',
+                            save_file=save_file_as,
                             title=['Forecast Validation Mean Squared Error',
                                    'Forecast Validation Symmetric Mean Absolute Percentage Error',
                                    'Forecast Validation 80% Prediction Interval Coverage',
                                    'Forecast Validation 95% Prediction Interval Coverage'])
     plot_test_results(model_paths=model_paths,
                       file_labels=labels,
-                      save_file='sine_batch_size',
+                      save_file=save_file_as,
                       title=['Forecast Mean Squared Error',
                              'Forecast Symmetric Mean Absolute Percentage Error',
                              'Forecast 80% Prediction Interval Coverage',

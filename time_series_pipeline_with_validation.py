@@ -63,7 +63,7 @@ def train_model(model, data, epochs, cfg, batch_size=128, verbose=1):
     return model, validation_mse, val
 
 
-def test_model(model, data, validation_mse, cfg, plot=True, file_name="/test_results.txt"):
+def test_model(model, data, validation_mse, cfg, naive_error, plot=True, file_name="/test_results.txt"):
     forecast = model.monte_carlo_forecast(data, steps=int(len(data)-model.window_size), plot=plot)  # steps x horizon x mc_forward_passes
     forecast_mean = forecast.mean(axis=-1)
     forecast_std = forecast.std(axis=-1)
@@ -82,8 +82,8 @@ def test_model(model, data, validation_mse, cfg, plot=True, file_name="/test_res
         plt.legend()
         plt.show()
     forecast_mse = sliding_window_mse(forecast_mean, data[model.window_size:], model.forecasting_horizon)
-
     forecast_smape = sliding_window_smape(forecast_mean, data[model.window_size:], model.forecasting_horizon)
+    forecast_mase = sliding_window_mase(forecast_mean, data[model.window_size:], model.forecasting_horizon, naive_error)
 
     coverage_80_1 = sliding_window_coverage(actual_values=data[model.window_size:],
                                             upper_limits=np.quantile(forecast, q=0.9, axis=-1),
@@ -136,7 +136,8 @@ def test_model(model, data, validation_mse, cfg, plot=True, file_name="/test_res
     file_path = cfg['results_path'] + file_name
 
     mse = forecast_mse
-    smap = forecast_smape
+    smape = forecast_smape
+    mase = forecast_mase
     if cfg['model_name'].lower() == 'rnn':
         std = total_uncertainty.mean(axis=0)
         c_80 = coverage_80_2
@@ -151,74 +152,64 @@ def test_model(model, data, validation_mse, cfg, plot=True, file_name="/test_res
         w_95 = width_95_1
 
     with open(file_path, "a") as f:
-        f.write("mse,smape,std,coverage_80,coverage_95,width_80,width_95\n")
-        for (mse, smap, std, c_80, c_95, w_80, w_95) in zip(mse, smap, std, c_80, c_95, w_80, w_95):
-            f.write("{0},{1},{2},{3},{4},{5},{6}\n".format(mse, smap, std, c_80, c_95, w_80, w_95))
+        f.write("mse,smape,mase,std,coverage_80,coverage_95,width_80,width_95\n")
+        for (mse, smape, mase, std, c_80, c_95, w_80, w_95) in zip(mse, smape, mase, std, c_80, c_95, w_80, w_95):
+            f.write("{0},{1},{2},{3},{4},{5},{6},{7}\n".format(mse, smape, mase, std, c_80, c_95, w_80, w_95))
 
-    return forecast_mse, forecast_smape, coverage_80_1, coverage_95_1, coverage_80_2, coverage_95_2, width_80_1, width_95_1, width_80_2, width_95_2, forecast_std.mean(axis=0)
+    return mse, smape, mase, std, c_80, c_95, w_80, w_95
 
 
 def pipeline():
     cfg = load_config_file('config\\config.yml')
-    forecast_mse_list, forecast_smape_list, validation_mse_list, forecast_std_list = [], [], [], []
-    width_80_1_list, width_95_1_list, width_80_2_list, width_95_2_list = [], [], [], []
-    coverage_80_1_list, coverage_95_1_list, coverage_80_2_list, coverage_95_2_list = [], [], [], []
+    forecast_mse_list, forecast_smape_list, forecast_mase_list = [], [], []
+    validation_mse_list, forecast_std_list = [], []
+    w_80_list, w_95_list = [], []
+    c_80_list, c_95_list = [], []
     for i in range(1):
         model = configure_model(cfg=cfg)
         train, test = load_data(cfg=cfg, window_size=model.window_size)
+        naive_error = compute_naive_error(train, seasonality=12, forecast_horizon=model.forecasting_horizon)
         start_time = time.time()
         trained_model, validation_mse, val = train_model(model=model, data=train, epochs=cfg['epochs'], cfg=cfg,
                                                          batch_size=cfg['batch_size'], verbose=0)
         training_time = time.time() - start_time
-        test_model(model=trained_model, data=val, validation_mse=validation_mse, cfg=cfg, plot=False,
+        test_model(model=trained_model, data=val, validation_mse=validation_mse, cfg=cfg, naive_error=naive_error,
+                   plot=False,
                    file_name="/validation_results.txt")
-        forecast_mse, forecast_smape, coverage_80_1, coverage_95_1, coverage_80_2, coverage_95_2, width_80_1, \
-            width_95_1, width_80_2, width_95_2, forecast_std = test_model(model=trained_model, data=test,
-                                                                          validation_mse=validation_mse, cfg=cfg,
-                                                                          plot=False, file_name="/test_results.txt")
+        mse, smape, mase, std, c_80, c_95, w_80, w_95 = test_model(model=trained_model, data=test,
+                                                                   validation_mse=validation_mse, cfg=cfg,
+                                                                   naive_error=naive_error, plot=False,
+                                                                   file_name="/test_results.txt")
 
-        forecast_mse_list.append(forecast_mse), forecast_smape_list.append(forecast_smape)
+        forecast_mse_list.append(mse), forecast_smape_list.append(smape), forecast_mase_list.append(mase)
         validation_mse_list.append(validation_mse)
-        forecast_std_list.append(forecast_std)
-        coverage_80_1_list.append(coverage_80_1), coverage_95_1_list.append(coverage_95_1)
-        coverage_80_2_list.append(coverage_80_2), coverage_95_2_list.append(coverage_95_2)
-        width_80_1_list.append(width_80_1), width_95_1_list.append(width_95_1)
-        width_80_2_list.append(width_80_2), width_95_2_list.append(width_95_2)
+        forecast_std_list.append(std)
+        c_80_list.append(c_80), c_95_list.append(c_95)
+        w_80_list.append(w_80), w_95_list.append(w_95)
 
     print('========================================================'
           '\n================ Point Forecast Metrics ================'
           '\n========================================================')
     print('Mean validation MSE:', np.mean(np.mean(validation_mse_list, axis=0)))
     print('Mean forecast MSE:', np.mean(np.mean(forecast_mse_list, axis=0)))
-    print('Forecast MSE:', np.mean(np.array(forecast_mse_list), axis=0))
+    # print('Forecast MSE:', np.mean(np.array(forecast_mse_list), axis=0))
     print('Mean forecast SMAPE:', np.mean(np.mean(forecast_smape_list, axis=0)))
-    print('Forecast SMAPE:', np.mean(np.array(forecast_smape_list), axis=0))
+    # print('Forecast SMAPE:', np.mean(np.array(forecast_smape_list), axis=0))
+    print('Mean forecast MASE:', np.mean(np.mean(forecast_mase_list, axis=0)))
     print('Training time:', training_time)
 
     print('========================================================'
           '\n================== Model Uncertainty ==================='
           '\n========================================================')
-    print('Estimated Standard deviation:', np.mean(np.mean(forecast_std_list, axis=0)),
-          np.mean(forecast_std_list, axis=0))
-    print('80%-prediction interval coverage - Mean:', np.mean(np.mean(coverage_80_1_list, axis=0)),
-          ', width:', np.mean(np.mean(np.array(width_80_1_list), axis=0)),
-          '\n Forecast horizon:', np.mean(np.array(coverage_80_1_list), axis=0))
-    print('95%-prediction interval coverage - Mean:',  np.mean(np.mean(coverage_95_1_list, axis=0)),
-          ', width:', np.mean(np.mean(np.array(width_95_1_list), axis=0)),
-          '\n Forecast horizon:', np.mean(np.array(coverage_95_1_list), axis=0))
-
-    print('========================================================'
-          '\n========== Model Uncertainty + Validation MSE ========== '
-          '\n========================================================')
-    print('Estimated Standard deviation:', np.mean(np.mean(np.sqrt(np.array(forecast_std_list)**2
-                                                                   + np.array(validation_mse_list)), axis=0)),
-          np.mean(np.sqrt(np.array(forecast_std_list)**2 + np.array(validation_mse_list)), axis=0))
-    print('80%-prediction interval coverage - Mean:', np.mean(np.mean(coverage_80_2_list, axis=0)),
-          ', width:', np.mean(width_80_2_list),
-          '\n Forecast horizon:', np.mean(np.array(coverage_80_2_list), axis=0))
-    print('95%-prediction interval coverage - Mean:', np.mean(np.mean(coverage_95_2_list, axis=0)),
-          ', width:', np.mean(width_95_2_list),
-          '\n Forecast horizon:', np.mean(np.array(coverage_95_2_list), axis=0))
+    print('Estimated Standard deviation:', np.mean(np.mean(forecast_std_list, axis=0)))
+    print('80%-prediction interval coverage - Mean:', np.mean(np.mean(c_80_list, axis=0)),
+          ', width:', np.mean(np.mean(np.array(w_80_list), axis=0)),
+          # '\n Forecast horizon:', np.mean(np.array(c_80_list), axis=0)
+          )
+    print('95%-prediction interval coverage - Mean:',  np.mean(np.mean(c_95_list, axis=0)),
+          ', width:', np.mean(np.mean(np.array(w_95_list), axis=0)),
+          # '\n Forecast horizon:', np.mean(np.array(c_95_list), axis=0)
+          )
 
 
 if __name__ == '__main__':
