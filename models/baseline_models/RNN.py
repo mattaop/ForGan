@@ -39,7 +39,7 @@ class RNN:
         inp = Input(shape=input_shape)
 
         # x = SimpleRNN(64, return_sequences=False)(inp)
-        x = LSTM(64, return_sequences=False)(inp)
+        x = LSTM(128, return_sequences=False)(inp)
 
         x = Dropout(0.4)(x)
         x = Dense(64, activation='relu')(x)
@@ -57,7 +57,8 @@ class RNN:
         data = generate_sine_data(data_samples)
         x_train, y_train = split_sequence(data, self.window_size, self.forecasting_horizon)
 
-        history = self.model.fit(x_train, y_train[:, :, 0], epochs=epochs, batch_size=batch_size, validation_split=0.1, verbose=2)
+        history = self.model.fit(x_train, y_train[:, :, 0], epochs=epochs, batch_size=batch_size, validation_split=0.1,
+                                 verbose=2, shuffle=True)
 
         plt.figure()
         plt.plot(np.linspace(1, epochs, epochs), history.history['loss'], label='Training loss')
@@ -68,7 +69,8 @@ class RNN:
 
     def fit(self, x, y, x_val=None, y_val=None, epochs=1, batch_size=32, verbose=2):
         # Load the data
-        history = self.model.fit(x, y[:, :, 0], epochs=epochs, batch_size=batch_size, verbose=verbose)
+        history = self.model.fit(x, y[:, :, 0], validation_data=[x_val, y_val[:, :, 0]], epochs=epochs,
+                                 batch_size=batch_size, verbose=2, shuffle=True)
         return history
 
     def forecast(self, x):

@@ -212,6 +212,10 @@ class RecurrentGAN(GAN):
         coverage_80_pi = []
         coverage_95_pi = []
         validation_mse = []
+
+        best_validation_mse = 10 ** 10
+        best_generator = self.generator
+        best_epoch = 0
         for epoch in range(epochs):
 
             # ---------------------
@@ -252,6 +256,8 @@ class RecurrentGAN(GAN):
 
             G_loss[epoch] = g_loss
             D_loss[epoch] = d_loss[0]
+
+
             # Print the progress
             if epoch % self.plot_rate == 0:
                 if self.print_coverage and (x_val is None) and (y_val is None):
@@ -299,6 +305,15 @@ class RecurrentGAN(GAN):
             if (epoch+1) % self.save_model_interval == 0:
                 self.discriminator.save(self.results_path + "/discriminator_%d.h5" % (epoch+1))
                 self.generator.save(self.results_path + "/generator_%d.h5" % (epoch+1))
+                if validation_mse[-1] < best_validation_mse:
+                    best_validation_mse = validation_mse[-1]
+                    best_generator = self.generator
+                    best_epoch = epoch+1
+
+        best_generator.save(self.results_path + "/generator_best_%d.h5" % best_epoch)
+        self.generator = best_generator
+        print('Best model at epoch %d' % best_epoch)
+
         if self.print_coverage:
             file_name = self.results_path + "/training_results.txt"
             with open(file_name, "a") as f:

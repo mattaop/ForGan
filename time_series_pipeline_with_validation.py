@@ -55,7 +55,7 @@ def train_model(model, data, epochs, cfg, batch_size=128, verbose=1):
 
     # Split training data into (x_t-l, ..., x_t), (x_t+1) pairs
     x_train, y_train = split_sequence(train, model.window_size, model.output_size)
-    x_val, y_val = split_sequence(data, model.window_size, model.output_size)
+    x_val, y_val = split_sequence(val, model.window_size, model.output_size)
     history = model.fit(x_train, y_train, x_val=x_val, y_val=y_val, epochs=epochs, batch_size=batch_size, verbose=verbose)
 
     validation_mse = compute_validation_error(model, val)
@@ -63,7 +63,7 @@ def train_model(model, data, epochs, cfg, batch_size=128, verbose=1):
     return model, validation_mse, val
 
 
-def test_model(model, data, validation_mse, cfg, naive_error, plot=True, file_name="/test_results.txt"):
+def test_model(model, data, validation_mse, cfg, naive_error, scaler, plot=True, file_name="/test_results.txt"):
     forecast = model.monte_carlo_forecast(data, steps=int(len(data)-model.window_size), plot=plot)  # steps x horizon x mc_forward_passes
     forecast_mean = forecast.mean(axis=-1)
     forecast_std = forecast.std(axis=-1)
@@ -82,7 +82,9 @@ def test_model(model, data, validation_mse, cfg, naive_error, plot=True, file_na
         plt.legend()
         plt.show()
     forecast_mse = sliding_window_mse(forecast_mean, data[model.window_size:], model.forecasting_horizon)
-    forecast_smape = sliding_window_smape(forecast_mean, data[model.window_size:], model.forecasting_horizon)
+    forecast_smape = sliding_window_smape(scaler.inverse_transform(forecast_mean),
+                                          scaler.inverse_transform(data[model.window_size:]),
+                                          model.forecasting_horizon)
     forecast_mase = sliding_window_mase(forecast_mean, data[model.window_size:], model.forecasting_horizon, naive_error)
 
     coverage_80_1 = sliding_window_coverage(actual_values=data[model.window_size:],
@@ -167,18 +169,17 @@ def pipeline():
     c_80_list, c_95_list = [], []
     for i in range(1):
         model = configure_model(cfg=cfg)
-        train, test = load_data(cfg=cfg, window_size=model.window_size)
+        train, test, scaler = load_data(cfg=cfg, window_size=model.window_size)
         naive_error = compute_naive_error(train, seasonality=12, forecast_horizon=model.forecasting_horizon)
         start_time = time.time()
         trained_model, validation_mse, val = train_model(model=model, data=train, epochs=cfg['epochs'], cfg=cfg,
                                                          batch_size=cfg['batch_size'], verbose=0)
         training_time = time.time() - start_time
         test_model(model=trained_model, data=val, validation_mse=validation_mse, cfg=cfg, naive_error=naive_error,
-                   plot=False,
-                   file_name="/validation_results.txt")
+                   scaler=scaler, plot=False, file_name="/validation_results.txt")
         mse, smape, mase, std, c_80, c_95, w_80, w_95 = test_model(model=trained_model, data=test,
                                                                    validation_mse=validation_mse, cfg=cfg,
-                                                                   naive_error=naive_error, plot=False,
+                                                                   naive_error=naive_error, scaler=scaler, plot=False,
                                                                    file_name="/test_results.txt")
 
         forecast_mse_list.append(mse), forecast_smape_list.append(smape), forecast_mase_list.append(mase)

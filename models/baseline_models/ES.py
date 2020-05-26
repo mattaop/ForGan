@@ -124,4 +124,4 @@ class ES:
         self.pred_int_80 = np.concatenate([forecasts - 1.28 * forecast_std, forecasts + 1.28 * forecast_std], axis=-1)
         self.pred_int_95 = np.concatenate([forecasts - 1.96 * forecast_std, forecasts + 1.96 * forecast_std], axis=-1)
         print(self.pred_int_80.shape)
-        return forecasts
+        return forecasts[:, :, 0]

@@ -50,10 +50,13 @@ def plot_validation_results(model_paths, file_labels, title, save_file='Validati
     plot_results(save_file=save_file + '_validation_smape', model_paths=model_paths, file_labels=file_labels, title=title[1],
                  x_label='Forecast horizon', y_label='Symmetric Mean Absolute Percentage Error (sMAPE)', value='smape',
                  data='validation', plot_rate=1)
-    plot_results(save_file=save_file + '_validation_80', model_paths=model_paths, file_labels=file_labels, title=title[2],
+    plot_results(save_file=save_file + '_validation_mase', model_paths=model_paths, file_labels=file_labels, title=title[2],
+                 x_label='Forecast horizon', y_label='Mean Absolute Scaled Error (MASE)', value='mase',
+                 data='test', plot_rate=1)
+    plot_results(save_file=save_file + '_validation_80', model_paths=model_paths, file_labels=file_labels, title=title[3],
                  x_label='Forecast horizon', y_label='Coverage', value='coverage_80', data='validation',
                  plot_rate=1)
-    plot_results(save_file=save_file + '_validation_95', model_paths=model_paths, file_labels=file_labels, title=title[3],
+    plot_results(save_file=save_file + '_validation_95', model_paths=model_paths, file_labels=file_labels, title=title[4],
                  x_label='Forecast horizon', y_label='Coverage', value='coverage_95', data='validation',
                  plot_rate=1)
 
@@ -65,10 +68,13 @@ def plot_test_results(model_paths, file_labels, title, save_file='Test'):
     plot_results(save_file=save_file + '_test_smape', model_paths=model_paths, file_labels=file_labels, title=title[1],
                  x_label='Forecast horizon', y_label='Symmetric Mean Absolute Percentage Error (sMAPE)', value='smape',
                  data='test', plot_rate=1)
-    plot_results(save_file=save_file + '_test_80', model_paths=model_paths, file_labels=file_labels, title=title[2],
+    plot_results(save_file=save_file + '_test_mase', model_paths=model_paths, file_labels=file_labels, title=title[2],
+                 x_label='Forecast horizon', y_label='Mean Absolute Scaled Error (MASE)', value='mase',
+                 data='test', plot_rate=1)
+    plot_results(save_file=save_file + '_test_80', model_paths=model_paths, file_labels=file_labels, title=title[3],
                  x_label='Forecast horizon', y_label='Coverage', value='coverage_80', data='test',
                  plot_rate=1)
-    plot_results(save_file=save_file + '_test_95', model_paths=model_paths, file_labels=file_labels, title=title[3],
+    plot_results(save_file=save_file + '_test_95', model_paths=model_paths, file_labels=file_labels, title=title[4],
                  x_label='Forecast horizon', y_label='Coverage', value='coverage_95', data='test',
                  plot_rate=1)
 
@@ -84,17 +90,17 @@ def main():
     noise_label = ['Noise vector = 1', 'Noise vector = 5', 'Noise vector = 10', 'Noise vector = 25',
                    'Noise vector = 50', 'Noise vector = 100']
 
-    d_epochs_paths = ['results/sine/recurrentgan/Epochs_1500_D_epochs_1_batch_size_64_noise_vec_50_lr_0.001000',
+    d_epochs_paths = ['results/sine/recurrentgan/rnn_epochs_1500_D_epochs_1_batch_size_32_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.001000',
                       # 'results/sine/recurrentgan/Epochs_1500_D_epochs_2_batch_size_64_noise_vec_50_lr_0.001000',
-                      'results/sine/recurrentgan/Epochs_1500_D_epochs_3_batch_size_64_noise_vec_50_lr_0.001000',
-                      'results/sine/recurrentgan/Epochs_1500_D_epochs_5_batch_size_64_noise_vec_50_lr_0.001000',
-                      'results/sine/recurrentgan/Epochs_1500_D_epochs_10_batch_size_64_noise_vec_50_lr_0.001000',
+                      'results/sine/recurrentgan/rnn_epochs_1500_D_epochs_3_batch_size_32_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.001000',
+                      'results/sine/recurrentgan/rnn_epochs_1500_D_epochs_5_batch_size_32_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.001000',
+                      'results/sine/recurrentgan/rnn_epochs_1500_D_epochs_10_batch_size_32_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.001000',
                       # 'results/sine/recurrentgan/Epochs_1500_D_epochs_15_batch_size_64_noise_vec_50_lr_0.001000',
-                      # 'results/sine/recurrentgan/Epochs_1500_D_epochs_20_batch_size_64_noise_vec_50_lr_0.001000',
+                      'results/sine/recurrentgan/rnn_epochs_1500_D_epochs_20_batch_size_32_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.001000',
                       # 'results/sine/recurrentgan/Epochs_1500_D_epochs_50_batch_size_64_noise_vec_50_lr_0.001000'
                       ]
     d_epochs_label = ['D$_{epochs}=1$',
-                      'D$_{epochs}=2$',
+                      # 'D$_{epochs}=2$',
                       'D$_{epochs}=3$',
                       'D$_{epochs}=5$',
                       'D$_{epochs}=10$',
@@ -109,10 +115,10 @@ def main():
                         'results/sine/recurrentgan/rnn_epochs_1500_D_epochs_5_batch_size_256_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.001000',]
     batch_size_labels = ['Batch size = 16', 'Batch size = 32', 'Batch size = 64', 'Batch size = 128', 'Batch size = 256']
 
-    save_file_as = 'sine_noise_vec'
+    save_file_as = 'sine_d_epochs'
 
-    model_paths = noise_paths
-    labels = noise_label
+    model_paths = d_epochs_paths
+    labels = d_epochs_label
     plot_training_results(model_paths=model_paths,
                           file_labels=labels,
                           save_file=save_file_as,
@@ -134,6 +140,7 @@ def main():
                             save_file=save_file_as,
                             title=['Forecast Validation Mean Squared Error',
                                    'Forecast Validation Symmetric Mean Absolute Percentage Error',
+                                   'Forecast Mean Absolute Scaled Error',
                                    'Forecast Validation 80% Prediction Interval Coverage',
                                    'Forecast Validation 95% Prediction Interval Coverage'])
     plot_test_results(model_paths=model_paths,
@@ -141,6 +148,7 @@ def main():
                       save_file=save_file_as,
                       title=['Forecast Mean Squared Error',
                              'Forecast Symmetric Mean Absolute Percentage Error',
+                             'Forecast Mean Absolute Scaled Error',
                              'Forecast 80% Prediction Interval Coverage',
                              'Forecast 95% Prediction Interval Coverage'])
 

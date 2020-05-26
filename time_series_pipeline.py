@@ -27,7 +27,7 @@ import time
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 from sklearn.metrics import mean_squared_error, mutual_info_score, normalized_mutual_info_score
-from sklearn.preprocessing import StandardScaler, MinMaxScaler
+from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
 import seaborn as sns
 
 from config.load_config import load_config_file, write_config_file
@@ -68,15 +68,19 @@ def load_data(cfg, window_size):
     train = data[:-int(len(data)*cfg['test_split'])]
     test = data[-int(len(data)*cfg['test_split']+window_size):]
     if not cfg['data_source'].lower() == 'sine':
-        train, test = scale_data(train, test)
-    return train, test
+        train, test, scaler = scale_data(train, test)
+    if cfg['model_name'].lower() == 'es':
+        train = train + 10
+        test = test + 10
+    return train, test, scaler
 
 
 def scale_data(train, test):
-    scaler = MinMaxScaler(feature_range=(10 ** (-10), 1))
+    # scaler = MinMaxScaler(feature_range=(10 ** (-10), 1))
+    scaler = RobustScaler()
     train = scaler.fit_transform(train)
     test = scaler.transform(test)
-    return train, test
+    return train, test, scaler
 
 
 def plot_results(y, label, y2=None, y2_label=None, title='', y_label='Value'):
@@ -170,7 +174,7 @@ def pipeline():
     forecast_std_list = []
     for i in range(1):
         model = configure_model(cfg=cfg)
-        train, test = load_data(cfg=cfg, window_size=model.window_size)
+        train, test, scaler = load_data(cfg=cfg, window_size=model.window_size)
         start_time = time.time()
         trained_model = train_model(model=model, data=train, epochs=cfg['gan']['epochs'],
                                     batch_size=cfg['gan']['batch_size'], verbose=1)
