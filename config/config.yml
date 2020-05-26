@@ -2,9 +2,9 @@ model_name: RecurrentGAN # RNN, ES, ARIMA, GAN, ConvGAN, RecurrentGAN, Recurrent
 loss_function: kl # kl, w, ds
 
 epochs: 3000
-batch_size: 16
+batch_size: 32
 learning_rate: 0.001
-discriminator_epochs: 20
+discriminator_epochs: 3
 
 layers: rnn  # rnn, lstm, gru
 generator_nodes: 16
