@@ -214,6 +214,6 @@ def pipeline(model_path, model_name):
 
 
 if __name__ == '__main__':
-    model_path = 'results/oslo/recurrentgan/rnn_epochs_3000_D_epochs_10_batch_size_16_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.001000/'
-    model_name = 'generator_3000.h5'
+    model_path = 'results/oslo/recurrentgan/lstm_epochs_10000_D_epochs_10_batch_size_32_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.001000/'
+    model_name = 'generator_10000.h5'
     pipeline(model_path, model_name)
