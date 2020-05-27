@@ -27,29 +27,25 @@ import time
 
 
 from config.load_config import load_config_file
-from models.get_model import get_gan
-from time_series_pipeline import configure_model, load_data, plot_results, train_model
-from utility.split_data import split_sequence
+from time_series_pipeline import configure_model, load_data, train_model
 from utility.compute_statistics import *
 
 
 def test_model(model, data, naive_error, cfg, scaler, plot=True, file_name="/test_results.txt"):
     forecast = model.monte_carlo_forecast(data, steps=int(len(data) - model.window_size), plot=plot)  # steps x horizon x mc_forward_passes
-    forecast_mse = sliding_window_mse(forecast, data[model.window_size:], model.forecasting_horizon)
-    forecast_std = np.sqrt(model.variance)
 
-    print(forecast.shape)
+    forecast_mse = sliding_window_mse(scaler.inverse_transform(forecast),
+                                      scaler.inverse_transform(data[model.window_size:]),
+                                      model.forecasting_horizon)
+    forecast_std = np.sqrt(model.variance).mean(axis=0)
 
-    if cfg['model_name'].lower() == 'es':
-        forecast_smape = sliding_window_smape(scaler.inverse_transform(forecast-10),
-                                              scaler.inverse_transform(data[model.window_size:]-10),
-                                              model.forecasting_horizon)
-    else:
-        forecast_smape = sliding_window_smape(scaler.inverse_transform(forecast),
-                                              scaler.inverse_transform(data[model.window_size:]),
-                                              model.forecasting_horizon)
-
-    forecast_mase = sliding_window_mase(forecast, data[model.window_size:], model.forecasting_horizon, naive_error)
+    forecast_smape = sliding_window_smape(scaler.inverse_transform(forecast),
+                                          scaler.inverse_transform(data[model.window_size:]),
+                                          model.forecasting_horizon)
+    forecast_mase = sliding_window_mase(scaler.inverse_transform(forecast),
+                                        scaler.inverse_transform(data[model.window_size:]),
+                                        model.forecasting_horizon,
+                                        naive_error)
 
     coverage_80 = sliding_window_coverage(actual_values=data[model.window_size:],
                                           upper_limits=model.pred_int_80[:, :, 1],
@@ -65,21 +61,13 @@ def test_model(model, data, naive_error, cfg, scaler, plot=True, file_name="/tes
 
     file_path = cfg['results_path'] + file_name
 
-    mse = forecast_mse
-    smape = forecast_smape
-    mase = forecast_mase
-    std = np.mean(forecast_std, axis=0)
-    c_80 = coverage_80
-    c_95 = coverage_95
-    w_80 = width_80
-    w_95 = width_95
-
     with open(file_path, "a") as f:
         f.write("mse,smape,mase,coverage_80,coverage_95,width_80,width_95\n")
-        for (mse, smape, mase, c_80, c_95, w_80, w_95) in zip(mse, smape, mase, c_80, c_95, w_80, w_95):
+        for (mse, smape, mase, c_80, c_95, w_80, w_95) in zip(forecast_mse, forecast_smape, forecast_mase, coverage_80,
+                                                              coverage_95, width_80, width_95):
             f.write("{0},{1},{2},{3},{4},{5},{6}\n".format(mse, smape, mase, c_80, c_95, w_80, w_95))
 
-    return mse, smape, mase, std, c_80, c_95, w_80, w_95
+    return forecast_mse, forecast_smape, forecast_mase, forecast_std, coverage_80, coverage_95, width_80, width_95
 
 
 def pipeline():
@@ -90,7 +78,8 @@ def pipeline():
     for i in range(1):
         model = configure_model(cfg=cfg)
         train, test, scaler = load_data(cfg=cfg, window_size=model.window_size)
-        naive_error = compute_naive_error(train, seasonality=12, forecast_horizon=model.forecasting_horizon)
+        naive_error = compute_naive_error(scaler.inverse_transform(train), seasonality=12,
+                                          forecast_horizon=model.forecasting_horizon)
         start_time = time.time()
         trained_model = train_model(model=model, data=train, epochs=cfg['epochs'],
                                     batch_size=cfg['batch_size'], verbose=1)

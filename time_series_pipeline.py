@@ -66,21 +66,34 @@ def load_data(cfg, window_size):
         return None
     print('Data shape', data.shape)
     train = data[:-int(len(data)*cfg['test_split'])]
+    print(np.max(train)-np.min(train))
     test = data[-int(len(data)*cfg['test_split']+window_size):]
-    if not cfg['data_source'].lower() == 'sine':
-        train, test, scaler = scale_data(train, test)
-    else:
-        scaler = MinMaxScaler(feature_range=(np.min(train), np.max(train)))
+    if cfg['model_name'].lower() == 'es':
+        scaler = MinMaxScaler(feature_range=(1, 2))
         train = scaler.fit_transform(train)
         test = scaler.transform(test)
-    if cfg['model_name'].lower() == 'es':
-        train = train + 10
-        test = test + 10
+    elif cfg['data_source'].lower() == 'sine':
+        scaler = MinMaxScaler(feature_range=(0, 1))
+        train = scaler.fit_transform(train)
+        test = scaler.transform(test)
+    else:
+        train, test, scaler = scale_data(train, test)
+
+    """
+    print(np.min(train), np.max(train))
+    plt.plot(train)
+    plt.show()
+    """
     return train, test, scaler
 
 
-def scale_data(train, test):
-    scaler = RobustScaler()
+def scale_data(train, test, cfg):
+    if cfg['scaler'].lower() == 'robust':
+        scaler = RobustScaler()
+    elif cfg['scaler'].lower() == 'standard':
+        scaler = StandardScaler()
+    else:
+        scaler = MinMaxScaler(feature_range=(0, 1))
     train = scaler.fit_transform(train)
     test = scaler.transform(test)
     return train, test, scaler

@@ -49,10 +49,3 @@ class RecurrentWGAN(RecurrentGAN, WGAN):
         model.summary()
 
         return model
-
-
-if __name__ == '__main__':
-    gan = RecurrentWGAN()
-    gan.build_gan()
-    gan.train(epochs=500, batch_size=64, discriminator_epochs=3)
-    gan.monte_carlo_forecast(steps=100, mc_forward_passes=500)

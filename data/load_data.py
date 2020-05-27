@@ -44,6 +44,5 @@ def load_electricity():
 
 
 if __name__ == "__main__":
-    print(load_australia_temperature().shape)
-    load_electricity()
-
+    df = load_oslo_temperature()
+    print(np.max(df)-np.min(df))

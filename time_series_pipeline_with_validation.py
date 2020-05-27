@@ -81,11 +81,15 @@ def test_model(model, data, validation_mse, cfg, naive_error, scaler, plot=True,
                          alpha=0.2, edgecolor='#CC4F1B', facecolor='#FF9848', label='95%-PI')
         plt.legend()
         plt.show()
-    forecast_mse = sliding_window_mse(forecast_mean, data[model.window_size:], model.forecasting_horizon)
+    forecast_mse = sliding_window_mse(scaler.inverse_transform(forecast_mean),
+                                      scaler.inverse_transform(data[model.window_size:]),
+                                      model.forecasting_horizon)
     forecast_smape = sliding_window_smape(scaler.inverse_transform(forecast_mean),
                                           scaler.inverse_transform(data[model.window_size:]),
                                           model.forecasting_horizon)
-    forecast_mase = sliding_window_mase(forecast_mean, data[model.window_size:], model.forecasting_horizon, naive_error)
+    forecast_mase = sliding_window_mase(scaler.inverse_transform(forecast_mean),
+                                        scaler.inverse_transform(data[model.window_size:]),
+                                        model.forecasting_horizon, naive_error)
 
     coverage_80_1 = sliding_window_coverage(actual_values=data[model.window_size:],
                                             upper_limits=np.quantile(forecast, q=0.9, axis=-1),
@@ -137,28 +141,26 @@ def test_model(model, data, validation_mse, cfg, naive_error, scaler, plot=True,
 
     file_path = cfg['results_path'] + file_name
 
-    mse = forecast_mse
-    smape = forecast_smape
-    mase = forecast_mase
     if cfg['model_name'].lower() == 'rnn':
         std = total_uncertainty.mean(axis=0)
-        c_80 = coverage_80_2
-        c_95 = coverage_95_2
-        w_80 = width_80_2
-        w_95 = width_95_2
+        coverage_80 = coverage_80_2
+        coverage_95 = coverage_95_2
+        width_80 = width_80_2
+        width_95 = width_95_2
     else:
         std = np.mean(forecast_std, axis=0)
-        c_80 = coverage_80_1
-        c_95 = coverage_95_1
-        w_80 = width_80_1
-        w_95 = width_95_1
+        coverage_80 = coverage_80_1
+        coverage_95 = coverage_95_1
+        width_80 = width_80_1
+        width_95 = width_95_1
 
     with open(file_path, "a") as f:
         f.write("mse,smape,mase,std,coverage_80,coverage_95,width_80,width_95\n")
-        for (mse, smape, mase, std, c_80, c_95, w_80, w_95) in zip(mse, smape, mase, std, c_80, c_95, w_80, w_95):
+        for (mse, smape, mase, std, c_80, c_95, w_80, w_95) in zip(forecast_mse, forecast_smape, forecast_mase, std,
+                                                                   coverage_80, coverage_95, width_80, width_95):
             f.write("{0},{1},{2},{3},{4},{5},{6},{7}\n".format(mse, smape, mase, std, c_80, c_95, w_80, w_95))
 
-    return mse, smape, mase, std, c_80, c_95, w_80, w_95
+    return forecast_mse, forecast_smape, forecast_mase, std, coverage_80, coverage_95, width_80, width_95
 
 
 def pipeline():
@@ -170,7 +172,8 @@ def pipeline():
     for i in range(1):
         model = configure_model(cfg=cfg)
         train, test, scaler = load_data(cfg=cfg, window_size=model.window_size)
-        naive_error = compute_naive_error(train, seasonality=12, forecast_horizon=model.forecasting_horizon)
+        naive_error = compute_naive_error(scaler.inverse_transform(train), seasonality=12,
+                                          forecast_horizon=model.forecasting_horizon)
         start_time = time.time()
         trained_model, validation_mse, val = train_model(model=model, data=train, epochs=cfg['epochs'], cfg=cfg,
                                                          batch_size=cfg['batch_size'], verbose=0)

@@ -19,6 +19,7 @@ class RNN:
     def __init__(self, cfg):
         self.plot_rate = cfg['plot_rate']
         self.plot_folder = 'RNN'
+        self.layers = cfg['layers']
         self.window_size = cfg['window_size']
         self.forecasting_horizon = cfg['forecast_horizon']
         self.recurrent_forecasting = cfg['recurrent_forecasting']
@@ -38,9 +39,12 @@ class RNN:
         input_shape = (self.window_size, 1)
         inp = Input(shape=input_shape)
 
-        # x = SimpleRNN(64, return_sequences=False)(inp)
-        x = LSTM(128, return_sequences=False)(inp)
-
+        if self.layers == 'lstm':
+            x = LSTM(128, return_sequences=False)(inp)
+        elif self.layers == 'gru':
+            x = GRU(64, return_sequences=False)(inp)
+        else:
+            x = SimpleRNN(64, return_sequences=False)(inp)
         x = Dropout(0.4)(x)
         x = Dense(64, activation='relu')(x)
         x = Dropout(0.4)(x)

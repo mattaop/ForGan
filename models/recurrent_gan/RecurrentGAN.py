@@ -91,9 +91,14 @@ class RecurrentGAN(GAN):
             hist = SimpleRNN(self.generator_nodes, return_sequences=False)(historic_inp)
 
         x = Concatenate(axis=1)([hist, noise_inp])
+        if self.dropout:
+            x = Dropout(0.2)(x, training=True)
+
         # x = BatchNormalization()(x)
         x = Dense(self.generator_nodes+self.noise_vector_size)(x)
         x = ReLU()(x)
+        if self.dropout:
+            x = Dropout(0.4)(x, training=True)
         # x = Dense(16)(x)
         # x = ReLU()(x)
         prediction = Dense(self.output_size)(x)
@@ -121,9 +126,14 @@ class RecurrentGAN(GAN):
 
         if self.batch_norm:
             x = BatchNormalization()(x)
+        if self.dropout:
+            x = Dropout(0.2)(x)
+
         # x = LeakyReLU(alpha=0.2)(x)
         x = Dense(self.discriminator_nodes)(x)
         x = LeakyReLU(alpha=0.1)(x)
+        if self.dropout:
+            x = Dropout(0.4)(x)
         # x = Dropout(0.2)(x)
         # x = Dense(32)(x)
         # x = LeakyReLU(alpha=0.1)(x)
@@ -257,7 +267,6 @@ class RecurrentGAN(GAN):
             G_loss[epoch] = g_loss
             D_loss[epoch] = d_loss[0]
 
-
             # Print the progress
             if epoch % self.plot_rate == 0:
                 if self.print_coverage and (x_val is None) and (y_val is None):
@@ -311,8 +320,8 @@ class RecurrentGAN(GAN):
                     best_epoch = epoch+1
 
         best_generator.save(self.results_path + "/generator_best_%d.h5" % best_epoch)
-        self.generator = best_generator
-        print('Best model at epoch %d' % best_epoch)
+        # self.generator = best_generator
+        print('Best model at epoch %d, validation mse: %f' % (best_epoch, best_validation_mse))
 
         if self.print_coverage:
             file_name = self.results_path + "/training_results.txt"

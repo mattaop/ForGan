@@ -42,47 +42,47 @@ def plot_results(save_file, model_paths, file_labels, title, x_label, y_label, v
 
 
 def plot_training_results(model_paths, file_labels, title, save_file='Train', plot_rate=1, data_set='sine'):
-    plot_results(save_file=data_set + '_' + save_file + '_train_mse', model_paths=['results/' + data_set + '/' + s for s in model_paths], file_labels=file_labels, title=title[0],
+    plot_results(save_file=data_set + '/' + save_file + '_train_mse', model_paths=['results/' + data_set + '/' + s for s in model_paths], file_labels=file_labels, title=title[0],
                  x_label='Training iterations', y_label='Mean Squared Error (MSE)', value='mse', data='training', plot_rate=plot_rate)
-    plot_results(save_file=data_set + '_' + save_file + '_train_80', model_paths=['results/' + data_set + '/' + s for s in model_paths], file_labels=file_labels, title=title[1],
+    plot_results(save_file=data_set + '/' + save_file + '_train_80', model_paths=['results/' + data_set + '/' + s for s in model_paths], file_labels=file_labels, title=title[1],
                  x_label='Training iterations', y_label='Coverage', value='coverage_80',  data='training', plot_rate=plot_rate)
-    plot_results(save_file=data_set + '_' + save_file + '_train_95', model_paths=['results/' + data_set + '/' + s for s in model_paths], file_labels=file_labels, title=title[2],
+    plot_results(save_file=data_set + '/' + save_file + '_train_95', model_paths=['results/' + data_set + '/' + s for s in model_paths], file_labels=file_labels, title=title[2],
                  x_label='Training iterations', y_label='Coverage', value='coverage_95', data='training', plot_rate=plot_rate)
 
 
 def plot_validation_results(model_paths, file_labels, title, save_file='Validation', data_set='sine'):
-    plot_results(save_file=data_set + '_' + save_file + '_validation_mse', model_paths=['results/' + data_set + '/' + s for s in model_paths], file_labels=file_labels, title=title[0],
+    plot_results(save_file=data_set + '/' + save_file + '_validation_mse', model_paths=['results/' + data_set + '/' + s for s in model_paths], file_labels=file_labels, title=title[0],
                  x_label='Forecast horizon', y_label='Mean Squared Error (MSE)', value='mse',  data='validation',
                  plot_rate=1)
-    plot_results(save_file=data_set + '_' + save_file + '_validation_smape', model_paths=['results/' + data_set + '/' + s for s in model_paths], file_labels=file_labels, title=title[1],
+    plot_results(save_file=data_set + '/' + save_file + '_validation_smape', model_paths=['results/' + data_set + '/' + s for s in model_paths], file_labels=file_labels, title=title[1],
                  x_label='Forecast horizon', y_label='Symmetric Mean Absolute Percentage Error (sMAPE)', value='smape',
                  data='validation', plot_rate=1)
-    plot_results(save_file=data_set + '_' + save_file + '_validation_mase', model_paths=['results/' + data_set + '/' + s for s in model_paths], file_labels=file_labels, title=title[2],
+    plot_results(save_file=data_set + '/' + save_file + '_validation_mase', model_paths=['results/' + data_set + '/' + s for s in model_paths], file_labels=file_labels, title=title[2],
                  x_label='Forecast horizon', y_label='Mean Absolute Scaled Error (MASE)', value='mase',
                  data='test', plot_rate=1)
-    plot_results(save_file=data_set + '_' + save_file + '_validation_80', model_paths=['results/' + data_set + '/' + s for s in model_paths], file_labels=file_labels, title=title[3],
+    plot_results(save_file=data_set + '/' + save_file + '_validation_80', model_paths=['results/' + data_set + '/' + s for s in model_paths], file_labels=file_labels, title=title[3],
                  x_label='Forecast horizon', y_label='Coverage', value='coverage_80', data='validation',
                  plot_rate=1)
-    plot_results(save_file=data_set + '_' + save_file + '_validation_95', model_paths=['results/' + data_set + '/' + s for s in model_paths], file_labels=file_labels, title=title[4],
+    plot_results(save_file=data_set + '/' + save_file + '_validation_95', model_paths=['results/' + data_set + '/' + s for s in model_paths], file_labels=file_labels, title=title[4],
                  x_label='Forecast horizon', y_label='Coverage', value='coverage_95', data='validation',
                  plot_rate=1)
 
 
 def plot_test_results(model_paths, file_labels, title, save_file='Test', data_set='sine'):
-    plot_results(save_file=data_set + '_' + save_file + '_test_mse', model_paths=['results/' + data_set + '/' + s for s in model_paths], file_labels=file_labels,
+    plot_results(save_file=data_set + '/' + save_file + '_test_mse', model_paths=['results/' + data_set + '/' + s for s in model_paths], file_labels=file_labels,
                  title=title[0], x_label='Forecast horizon', y_label='Mean Squared Error (MSE)', value='mse',
                  data='test',   plot_rate=1)
-    plot_results(save_file=data_set + '_' + save_file + '_test_smape', model_paths=['results/' + data_set + '/' + s for s in model_paths], file_labels=file_labels,
+    plot_results(save_file=data_set + '/' + save_file + '_test_smape', model_paths=['results/' + data_set + '/' + s for s in model_paths], file_labels=file_labels,
                  title=title[1], x_label='Forecast horizon', y_label='Symmetric Mean Absolute Percentage Error (sMAPE)',
                  value='smape',
                  data='test', plot_rate=1)
-    plot_results(save_file=data_set + '_' + save_file + '_test_mase', model_paths=['results/' + data_set + '/' + s for s in model_paths], file_labels=file_labels,
+    plot_results(save_file=data_set + '/' + save_file + '_test_mase', model_paths=['results/' + data_set + '/' + s for s in model_paths], file_labels=file_labels,
                  title=title[2], x_label='Forecast horizon', y_label='Mean Absolute Scaled Error (MASE)', value='mase',
                  data='test', plot_rate=1)
-    plot_results(save_file=data_set + '_' + save_file + '_test_80', model_paths=['results/' + data_set + '/' + s for s in model_paths], file_labels=file_labels,
+    plot_results(save_file=data_set + '/' + save_file + '_test_80', model_paths=['results/' + data_set + '/' + s for s in model_paths], file_labels=file_labels,
                  title=title[3], x_label='Forecast horizon', y_label='Coverage', value='coverage_80', data='test',
                  plot_rate=1)
-    plot_results(save_file=data_set + '_' + save_file + '_test_95', model_paths=['results/' + data_set + '/' + s for s in model_paths], file_labels=file_labels,
+    plot_results(save_file=data_set + '/' + save_file + '_test_95', model_paths=['results/' + data_set + '/' + s for s in model_paths], file_labels=file_labels,
                  title=title[4], x_label='Forecast horizon', y_label='Coverage', value='coverage_95', data='test',
                  plot_rate=1)
 
@@ -123,7 +123,7 @@ def main():
                         'recurrentgan/rnn_epochs_1500_D_epochs_5_batch_size_256_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.001000',]
     batch_size_labels = ['Batch size = 16', 'Batch size = 32', 'Batch size = 64', 'Batch size = 128', 'Batch size = 256']
 
-    data_set = 'oslo'
+    data_set = 'sine'
     save_file_as = 'd_epochs'
     model_paths = d_epochs_paths
     labels = d_epochs_label
@@ -148,7 +148,7 @@ def main():
     model_paths = ['arima',
                    'es',
                    'rnn/rnn_epochs_1500_D_epochs_1_batch_size_64_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.001000',
-                   'recurrentgan/rnn_epochs_3000_D_epochs_10_batch_size_16_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.001000']
+                   'recurrentgan/rnn_epochs_3000_D_epochs_20_batch_size_32_noise_vec_100_gnodes_64_dnodes_64_loss_kl_lr_0.001000']
     labels = ['ARIMA',
               'Exponential Smoothing',
               'MC Dropout',

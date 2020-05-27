@@ -32,6 +32,7 @@ class GAN:
         self.discriminator_epochs = cfg['discriminator_epochs']
 
         self.batch_norm = cfg['batch_norm']
+        self.dropout = cfg['dropout']
         self.learning_rate = cfg['learning_rate']
         self.optimizer = Adam(lr=self.learning_rate, beta_1=0.5)
         self.discriminator_loss = binary_crossentropy
