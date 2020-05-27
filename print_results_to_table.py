@@ -11,7 +11,6 @@ def read_files(file_name):
 
 
 def print_results(model_paths, labels, model_names):
-    plt.figure()
     for model_paths, label, model_name in zip(model_paths, labels, model_names):
         df = read_files(model_paths)
         print(model_name + " & " + label + " & $ %.5f $ & $ %.2f $ &  $ %.2f $  &  $ %.2f $ \\\\ "

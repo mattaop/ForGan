@@ -69,6 +69,10 @@ def load_data(cfg, window_size):
     test = data[-int(len(data)*cfg['test_split']+window_size):]
     if not cfg['data_source'].lower() == 'sine':
         train, test, scaler = scale_data(train, test)
+    else:
+        scaler = MinMaxScaler(feature_range=(np.min(train), np.max(train)))
+        train = scaler.fit_transform(train)
+        test = scaler.transform(test)
     if cfg['model_name'].lower() == 'es':
         train = train + 10
         test = test + 10
@@ -76,7 +80,6 @@ def load_data(cfg, window_size):
 
 
 def scale_data(train, test):
-    # scaler = MinMaxScaler(feature_range=(10 ** (-10), 1))
     scaler = RobustScaler()
     train = scaler.fit_transform(train)
     test = scaler.transform(test)
