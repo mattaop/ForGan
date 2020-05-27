@@ -81,11 +81,16 @@ def test_model(model, data, validation_mse, cfg, naive_error, scaler, plot=True,
                          alpha=0.2, edgecolor='#CC4F1B', facecolor='#FF9848', label='95%-PI')
         plt.legend()
         plt.show()
-    forecast_mse = sliding_window_mse(forecast_mean, data[model.window_size:], model.forecasting_horizon)
+    forecast_mse = sliding_window_mse(scaler.inverse_transform(forecast_mean),
+                                      scaler.inverse_transform(data[model.window_size:]),
+                                      model.forecasting_horizon)
     forecast_smape = sliding_window_smape(scaler.inverse_transform(forecast_mean),
                                           scaler.inverse_transform(data[model.window_size:]),
                                           model.forecasting_horizon)
-    forecast_mase = sliding_window_mase(forecast_mean, data[model.window_size:], model.forecasting_horizon, naive_error)
+    forecast_mase = sliding_window_mase(scaler.inverse_transform(forecast_mean),
+                                        scaler.inverse_transform(data[model.window_size:]),
+                                        model.forecasting_horizon,
+                                        naive_error)
 
     coverage_80_1 = sliding_window_coverage(actual_values=data[model.window_size:],
                                             upper_limits=np.quantile(forecast, q=0.9, axis=-1),
@@ -171,7 +176,8 @@ def pipeline(model_path, model_name):
         model = configure_model(cfg=cfg)
         model.generator = load_model(model_path+model_name)
         train, test, scaler = load_data(cfg=cfg, window_size=model.window_size)
-        naive_error = compute_naive_error(train, seasonality=12, forecast_horizon=model.forecasting_horizon)
+        naive_error = compute_naive_error(scaler.inverse_transform(train), seasonality=12,
+                                          forecast_horizon=model.forecasting_horizon)
         start_time = time.time()
         trained_model, validation_mse, val = train_model(model=model, data=train, cfg=cfg)
         training_time = time.time() - start_time
@@ -214,6 +220,6 @@ def pipeline(model_path, model_name):
 
 
 if __name__ == '__main__':
-    model_path = 'results/oslo/recurrentgan/lstm_epochs_10000_D_epochs_10_batch_size_32_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.001000/'
-    model_name = 'generator_10000.h5'
+    model_path = 'results/sine/recurrentgan/minmax/rnn_epochs_1500_D_epochs_3_batch_size_32_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.001000/'
+    model_name = 'generator_best_900.h5'
     pipeline(model_path, model_name)

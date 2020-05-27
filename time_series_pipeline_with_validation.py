@@ -153,6 +153,7 @@ def test_model(model, data, validation_mse, cfg, naive_error, scaler, plot=True,
         coverage_95 = coverage_95_1
         width_80 = width_80_1
         width_95 = width_95_1
+    std = scaler.inverse_transform(std.reshape(-1, 1))
 
     with open(file_path, "a") as f:
         f.write("mse,smape,mase,std,coverage_80,coverage_95,width_80,width_95\n")
