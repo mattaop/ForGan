@@ -1,4 +1,4 @@
-batch_norm: false
+batch_norm: true
 batch_size: 32
 cross_validation_setup:
   k-folds: 5

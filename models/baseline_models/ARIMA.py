@@ -70,5 +70,7 @@ class ARIMA:
             self.arima_model.update(y=data[i])
         self.pred_int_80 = pred_int_80
         self.pred_int_95 = pred_int_95
+        self.variance = (0.25 / 1.28 * (np.mean(pred_int_80[:, :, 1], axis=0) - np.mean(pred_int_80[:, :, 0], axis=0)) +\
+                         0.25 / 1.96 * (np.mean(pred_int_95[:, :, 1], axis=0) - np.mean(pred_int_95[:, :, 0], axis=0)))**2
         print(pred_int_80.shape)
         return forecasts

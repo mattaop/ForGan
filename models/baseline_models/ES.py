@@ -53,7 +53,12 @@ class ES:
         model_es = ExponentialSmoothing(train, seasonal_periods=12,
                                         trend=best_model_parameters[0], seasonal=best_model_parameters[1],
                                         damped=best_model_parameters[2])
+        model_es = ExponentialSmoothing(train, seasonal_periods=12,
+                                        trend=None, seasonal='add',
+                                        damped=False)
+
         model_es = model_es.fit(optimized=True)
+        best_model_parameters[1] = 'add'
 
         print(model_es.params)
         print('ETS: T=', best_model_parameters[0], ', S=', best_model_parameters[1], ', damped=',

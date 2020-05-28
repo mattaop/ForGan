@@ -145,14 +145,16 @@ def main():
                                    'Forecast Validation 95% Prediction Interval Coverage'],
                             data_set=data_set)
 
-    # model_paths = ['arima',
-    #                'es',
-    #                'rnn/rnn_epochs_1500_D_epochs_1_batch_size_64_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.001000',
-    #                'recurrentgan/rnn_epochs_3000_D_epochs_20_batch_size_32_noise_vec_100_gnodes_64_dnodes_64_loss_kl_lr_0.001000']
-    # labels = ['ARIMA',
-    #           'Exponential Smoothing',
-    #           'MC Dropout',
-    #           'ForGAN']
+    model_paths = ['arima',
+                   'es',
+                   'rnn/minmax/rnn_epochs_2000_D_epochs_5_batch_size_32_noise_vec_100_gnodes_64_dnodes_64_loss_kl_lr_0.001000',
+                   'recurrentgan/minmax/rnn_epochs_1500_D_epochs_5_batch_size_32_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.001000'
+                           ]
+    labels = ['ARIMA',
+              'Exponential Smoothing',
+              'MC Dropout',
+              'ForGAN']
+    save_file_as = 'compare'
     plot_test_results(model_paths=model_paths,
                       file_labels=labels,
                       save_file=save_file_as,

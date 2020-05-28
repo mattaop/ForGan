@@ -68,17 +68,15 @@ def load_data(cfg, window_size):
     train = data[:-int(len(data)*cfg['test_split'])]
     print(np.max(train)-np.min(train))
     test = data[-int(len(data)*cfg['test_split']+window_size):]
+    original_scale = np.max(train)-np.min(train)
     if cfg['model_name'].lower() == 'es':
         scaler = MinMaxScaler(feature_range=(1, 2))
         train = scaler.fit_transform(train)
         test = scaler.transform(test)
-    elif cfg['data_source'].lower() == 'sine':
-        scaler = MinMaxScaler(feature_range=(0, 1))
-        train = scaler.fit_transform(train)
-        test = scaler.transform(test)
+        print(np.max(train), np.min(train))
     else:
-        train, test, scaler = scale_data(train, test)
-
+        train, test, scaler = scale_data(train, test, cfg)
+    print(original_scale/(np.max(train)-np.min(train)))
     """
     print(np.min(train), np.max(train))
     plt.plot(train)

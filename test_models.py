@@ -63,7 +63,7 @@ def train_model(model, data, cfg):
     return model, validation_mse, val
 
 
-def test_model(model, data, validation_mse, cfg, naive_error, scaler, plot=True, file_name="/test_results.txt"):
+def test_model(model, data, validation_mse, cfg, naive_error, scaler, plot=True, file_name="/test_results.txt", minmax=None):
     forecast = model.monte_carlo_forecast(data, steps=int(len(data)-model.window_size), plot=plot)  # steps x horizon x mc_forward_passes
     forecast_mean = forecast.mean(axis=-1)
     forecast_std = forecast.std(axis=-1)
@@ -147,16 +147,24 @@ def test_model(model, data, validation_mse, cfg, naive_error, scaler, plot=True,
     mase = forecast_mase
     if cfg['model_name'].lower() == 'rnn':
         std = total_uncertainty.mean(axis=0)
-        c_80 = coverage_80_2
-        c_95 = coverage_95_2
-        w_80 = width_80_2
-        w_95 = width_95_2
+        coverage_80 = coverage_80_2
+        coverage_95 = coverage_95_2
+        width_80 = width_80_2
+        width_95 = width_95_2
+        if minmax:
+            std *= minmax
+            width_80 *= minmax
+            width_95 *= minmax
     else:
-        std = np.mean(forecast_std, axis=0)
-        c_80 = coverage_80_1
-        c_95 = coverage_95_1
-        w_80 = width_80_1
-        w_95 = width_95_1
+        std = forecast_std.mean(axis=0)
+        coverage_80 = coverage_80_1
+        coverage_95 = coverage_95_1
+        width_80 = width_80_1
+        width_95 = width_95_1
+        if minmax:
+            std *= minmax
+            width_80 *= minmax
+            width_95 *= minmax
 
     with open(file_path, "a") as f:
         f.write("mse,smape,mase,std,coverage_80,coverage_95,width_80,width_95\n")
@@ -182,11 +190,19 @@ def pipeline(model_path, model_name):
         trained_model, validation_mse, val = train_model(model=model, data=train, cfg=cfg)
         training_time = time.time() - start_time
         test_model(model=trained_model, data=val, validation_mse=validation_mse, cfg=cfg, naive_error=naive_error,
-                   scaler=scaler, plot=False, file_name="/validation_results_" + model_name + ".txt")
+                   scaler=scaler, plot=False, file_name="/validation_results_" + model_name + ".txt",   minmax=(np.max(
+                                                                       scaler.inverse_transform(train)) - np.min(
+                                                                       scaler.inverse_transform(train))) /
+                                                                          (np.max(train) - np.min(train)))
         mse, smape, mase, std, c_80, c_95, w_80, w_95 = test_model(model=trained_model, data=test,
                                                                    validation_mse=validation_mse, cfg=cfg,
                                                                    naive_error=naive_error, scaler=scaler, plot=False,
-                                                                   file_name="/test_results" + model_name + ".txt")
+                                                                   file_name="/test_results" + model_name + ".txt",
+                                                                   minmax=(np.max(
+                                                                       scaler.inverse_transform(train)) - np.min(
+                                                                       scaler.inverse_transform(train))) /
+                                                                          (np.max(train) - np.min(train))
+                                                                   )
 
         forecast_mse_list.append(mse), forecast_smape_list.append(smape), forecast_mase_list.append(mase)
         validation_mse_list.append(validation_mse)
@@ -220,6 +236,6 @@ def pipeline(model_path, model_name):
 
 
 if __name__ == '__main__':
-    model_path = 'results/sine/recurrentgan/minmax/rnn_epochs_1500_D_epochs_3_batch_size_32_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.001000/'
-    model_name = 'generator_best_900.h5'
+    model_path = 'results/sine/recurrentgan/minmax/rnn_epochs_1500_D_epochs_5_batch_size_32_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.001000/'
+    model_name = 'generator_1500.h5'
     pipeline(model_path, model_name)
