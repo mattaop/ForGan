@@ -35,19 +35,8 @@ from data.generate_sine import generate_sine_data
 from data.load_data import load_oslo_temperature, load_australia_temperature
 from utility.compute_statistics import *
 from time_series_pipeline import configure_model, load_data, plot_results
+from time_series_pipeline_with_validation import test_model, compute_validation_error
 
-
-def compute_validation_error(model, data):
-    # Split validation data into (x_t-l, ..., x_t), (x_t+1) pairs
-    x_val, y_val = split_sequence(data, model.window_size, model.output_size)
-
-    # Compute inherent noise on validation set
-    y_predicted = model.forecast(x_val)
-
-    validation_mse = np.zeros(model.output_size)
-    for i in range(model.output_size):
-        validation_mse[i] = mean_squared_error(y_val[:, i], y_predicted[:, i])
-    return validation_mse
 
 
 def train_model(model, data, cfg):
@@ -61,117 +50,6 @@ def train_model(model, data, cfg):
     validation_mse = compute_validation_error(model, val)
 
     return model, validation_mse, val
-
-
-def test_model(model, data, validation_mse, cfg, naive_error, scaler, plot=True, file_name="/test_results.txt", minmax=None):
-    forecast = model.monte_carlo_forecast(data, steps=int(len(data)-model.window_size), plot=plot)  # steps x horizon x mc_forward_passes
-    forecast_mean = forecast.mean(axis=-1)
-    forecast_std = forecast.std(axis=-1)
-    forecast_var = forecast.var(axis=-1)
-
-    total_uncertainty = np.sqrt(forecast_var + validation_mse)
-    if plot:
-        x_pred = np.linspace(model.window_size+1, len(data), len(data)-model.window_size)
-        plt.figure()
-        plt.plot(np.linspace(1, len(data), len(data)), data, label='Data')
-        plt.plot(x_pred, forecast_mean[:, 0], label='Predictions')
-        plt.fill_between(x_pred, forecast_mean[:, 0]-1.28*forecast_std[:, 0], forecast_mean[:, 0]+1.28*forecast_std[:, 0],
-                         alpha=0.5, edgecolor='#CC4F1B', facecolor='#FF9848', label='80%-PI')
-        plt.fill_between(x_pred, forecast_mean[:, 0]-1.96*forecast_std[:, 0], forecast_mean[:, 0]+1.96*forecast_std[:, 0],
-                         alpha=0.2, edgecolor='#CC4F1B', facecolor='#FF9848', label='95%-PI')
-        plt.legend()
-        plt.show()
-    forecast_mse = sliding_window_mse(scaler.inverse_transform(forecast_mean),
-                                      scaler.inverse_transform(data[model.window_size:]),
-                                      model.forecasting_horizon)
-    forecast_smape = sliding_window_smape(scaler.inverse_transform(forecast_mean),
-                                          scaler.inverse_transform(data[model.window_size:]),
-                                          model.forecasting_horizon)
-    forecast_mase = sliding_window_mase(scaler.inverse_transform(forecast_mean),
-                                        scaler.inverse_transform(data[model.window_size:]),
-                                        model.forecasting_horizon,
-                                        naive_error)
-
-    coverage_80_1 = sliding_window_coverage(actual_values=data[model.window_size:],
-                                            upper_limits=np.quantile(forecast, q=0.9, axis=-1),
-                                            lower_limits=np.quantile(forecast, q=0.1, axis=-1),
-                                            forecast_horizon=model.forecasting_horizon)
-    coverage_95_1 = sliding_window_coverage(actual_values=data[model.window_size:],
-                                            upper_limits=np.quantile(forecast, q=0.975, axis=-1),
-                                            lower_limits=np.quantile(forecast, q=0.025, axis=-1),
-                                            forecast_horizon=model.forecasting_horizon)
-    coverage_80_2 = sliding_window_coverage(actual_values=data[model.window_size:],
-                                            upper_limits=forecast_mean + 1.28*total_uncertainty,
-                                            lower_limits=forecast_mean - 1.28*total_uncertainty,
-                                            forecast_horizon=model.forecasting_horizon)
-    coverage_95_2 = sliding_window_coverage(actual_values=data[model.window_size:],
-                                            upper_limits=forecast_mean + 1.96 * total_uncertainty,
-                                            lower_limits=forecast_mean - 1.96 * total_uncertainty,
-                                            forecast_horizon=model.forecasting_horizon)
-    width_80_1 = np.mean(np.quantile(forecast, q=0.9, axis=-1)-np.quantile(forecast, q=0.1, axis=-1), axis=0)
-    width_95_1 = np.mean(np.quantile(forecast, q=0.975, axis=-1)-np.quantile(forecast, q=0.025, axis=-1), axis=0)
-    width_80_2 = 2*1.28 * np.mean(total_uncertainty, axis=0)
-    width_95_2 = 2*1.96 * np.mean(total_uncertainty, axis=0)
-    if plot:
-        print('Width 80:', np.mean(width_80_1), ', width 95:', np.mean(width_95_1))
-
-        print('80%-prediction interval coverage - Mean:', coverage_80_1.mean(),
-              '\n Forecast horizon:', coverage_80_1)
-        print('95%-prediction interval coverage - Mean:', coverage_95_1.mean(),
-              '\n Forecast horizon:', coverage_95_1)
-
-        print('Width 80:', np.mean(width_80_2), ', width 95:', np.mean(width_95_2))
-        print('80%-prediction interval coverage - Mean:', coverage_80_2.mean(),
-              '\n Forecast horizon:', coverage_80_2)
-        print('95%-prediction interval coverage - Mean:', coverage_95_2.mean(),
-              '\n Forecast horizon:', coverage_95_2)
-
-        plot_results(sliding_window_mse(forecast_mean, data[model.window_size:], model.forecasting_horizon),
-                     label='Forecast MSE', title='Mean Squared Forecast Error', y_label='MSE')
-        plot_results(sliding_window_coverage(actual_values=data[model.window_size:],
-                                             upper_limits=np.quantile(forecast, q=0.9, axis=-1),
-                                             lower_limits=np.quantile(forecast, q=0.1, axis=-1),
-                                             forecast_horizon=model.forecasting_horizon),
-                     label='80% PI coverage',
-                     y2=sliding_window_coverage(actual_values=data[model.window_size:],
-                                                upper_limits=np.quantile(forecast, q=0.975, axis=-1),
-                                                lower_limits=np.quantile(forecast, q=0.025, axis=-1),
-                                                forecast_horizon=model.forecasting_horizon),
-                     y2_label='95% PI coverage',
-                     title='Prediction Interval Coverage', y_label='Coverage')
-
-    file_path = cfg['results_path'] + file_name
-
-    mse = forecast_mse
-    smape = forecast_smape
-    mase = forecast_mase
-    if cfg['model_name'].lower() == 'rnn':
-        std = total_uncertainty.mean(axis=0)
-        coverage_80 = coverage_80_2
-        coverage_95 = coverage_95_2
-        width_80 = width_80_2
-        width_95 = width_95_2
-        if minmax:
-            std *= minmax
-            width_80 *= minmax
-            width_95 *= minmax
-    else:
-        std = forecast_std.mean(axis=0)
-        coverage_80 = coverage_80_1
-        coverage_95 = coverage_95_1
-        width_80 = width_80_1
-        width_95 = width_95_1
-        if minmax:
-            std *= minmax
-            width_80 *= minmax
-            width_95 *= minmax
-
-    with open(file_path, "a") as f:
-        f.write("mse,smape,mase,std,coverage_80,coverage_95,width_80,width_95\n")
-        for (mse, smape, mase, std, c_80, c_95, w_80, w_95) in zip(mse, smape, mase, std, c_80, c_95, w_80, w_95):
-            f.write("{0},{1},{2},{3},{4},{5},{6},{7}\n".format(mse, smape, mase, std, c_80, c_95, w_80, w_95))
-
-    return mse, smape, mase, std, c_80, c_95, w_80, w_95
 
 
 def pipeline(model_path, model_name):
@@ -236,6 +114,6 @@ def pipeline(model_path, model_name):
 
 
 if __name__ == '__main__':
-    model_path = 'results/sine/recurrentgan/minmax/rnn_epochs_1500_D_epochs_5_batch_size_32_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.001000/'
-    model_name = 'generator_1500.h5'
+    model_path = 'results/oslo/recurrentgan/minmax/rnn_epochs_5000_D_epochs_10_batch_size_32_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.001000/'
+    model_name = 'generator_best_900.h5'
     pipeline(model_path, model_name)

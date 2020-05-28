@@ -36,7 +36,7 @@ class RecurrentWGAN(RecurrentGAN, WGAN):
         x = Concatenate(axis=1)([historic_inp, future_inp])
 
         # define the constraint
-        const = ClipConstraint(0.1)
+        const = ClipConstraint(0.01)
 
         x = SimpleRNN(self.discriminator_nodes, return_sequences=False, kernel_constraint=const)(x)
         # x = BatchNormalization()(x)
