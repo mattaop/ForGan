@@ -55,42 +55,50 @@ def pipeline(model_path, model_name):
     cfg = load_config_file(model_path+'config.yml')
     model = configure_model(cfg=cfg)
     model.generator = load_model(model_path+model_name)
-    train, test, scaler = load_data(cfg=cfg, window_size=model.window_size)
-    naive_error = compute_naive_error(scaler.inverse_transform(train), seasonality=12,
-                                      forecast_horizon=model.forecasting_horizon)
-    trained_model, validation_mse, val = train_model(model=model, data=train, cfg=cfg)
-    # trained_model.forecasting_horizon = len(test)-trained_model.window_size
-    forecast = trained_model.recurrent_forecast(np.expand_dims(test[:model.window_size], 0))
-    print(forecast.shape)
-    forecast_mean = np.mean(forecast, axis=-1)
-    forecast_var = np.std(forecast, axis=-1)
-    x_pred = np.linspace(model.window_size + 1, len(forecast_mean)+model.window_size, len(forecast_mean))
-    if cfg['model_name'].lower() == 'rnn':
-        total_uncertainty = np.sqrt(forecast_var + validation_mse)
-        x_pred = np.linspace(model.window_size + 1, len(test), len(test) - model.window_size)
-        plt.figure()
-        plt.plot(np.linspace(1, len(test), len(test)), test, label='Data')
-        plt.plot(x_pred, forecast_mean, label='Predictions')
-        plt.fill_between(x_pred, forecast_mean - 1.28 * total_uncertainty,
-                         forecast_mean + 1.28 * total_uncertainty,
-                         alpha=0.5, edgecolor='#CC4F1B', facecolor='#FF9848', label='80%-PI')
-        plt.fill_between(x_pred, forecast_mean - 1.96 * total_uncertainty,
-                         forecast_mean + 1.96 * total_uncertainty,
-                         alpha=0.2, edgecolor='#CC4F1B', facecolor='#FF9848', label='95%-PI')
-        plt.legend()
-        plt.show()
-    elif cfg['model_name'].lower() in ['es', 'arima']:
-        x_pred = np.linspace(model.window_size + 1, len(test), len(test) - model.window_size)
-        plt.figure()
-        plt.plot(np.linspace(1, len(test), len(test)), test, label='Data')
-        plt.plot(x_pred, forecast, label='Predictions')
-        plt.fill_between(x_pred, model.pred_int_80[0], model.pred_int_80[1],
-                         alpha=0.5, edgecolor='#CC4F1B', facecolor='#FF9848', label='80%-PI')
-        plt.fill_between(x_pred, model.pred_int_95[1], model.pred_int_95[1],
-                         alpha=0.2, edgecolor='#CC4F1B', facecolor='#FF9848', label='95%-PI')
-        plt.legend()
-        plt.show()
+    train_df, test_df, scalers = load_data(cfg=cfg, window_size=model.window_size)
+    print(train_df.columns)
+    if cfg['data_source'] == 'avocado':
+        for i in range(len(train_df.columns.values)):
+            column = train_df.columns.values[i]
+            train = train_df[column].values.reshape(-1, 1)
+            test = test_df[column].values.reshape(-1, 1)
+            scaler = scalers[i]
+            trained_model, validation_mse, val = train_model(model=model, data=train, cfg=cfg)
+            # trained_model.forecasting_horizon = len(test)-trained_model.window_size
+            forecast = trained_model.recurrent_forecast(np.expand_dims(test[:model.window_size], 0))
+            print(forecast.shape)
+            forecast_mean = np.mean(forecast, axis=-1)
+            forecast_var = np.std(forecast, axis=-1)
+            x_pred = np.linspace(model.window_size + 1, len(forecast_mean) + model.window_size, len(forecast_mean))
+
+            plt.figure()
+            plt.plot(np.linspace(1, trained_model.window_size + trained_model.forecasting_horizon,
+                                 trained_model.window_size + trained_model.forecasting_horizon),
+                     scaler.inverse_transform(test[:trained_model.window_size + trained_model.forecasting_horizon]),
+                     label='Data')
+            plt.plot(x_pred,
+                     scaler.inverse_transform(forecast_mean.reshape(-1, 1)), label='ForGAN')
+            plt.fill_between(x_pred,
+                             scaler.inverse_transform(np.quantile(forecast, q=0.1, axis=-1).reshape(-1, 1))[:, 0],
+                             scaler.inverse_transform(np.quantile(forecast, q=0.9, axis=-1).reshape(-1, 1))[:, 0],
+                             alpha=0.5, edgecolor='#CC4F1B', facecolor='#FF9848', label='80%-PI')
+            plt.fill_between(x_pred,
+                             scaler.inverse_transform(np.quantile(forecast, q=0.025, axis=-1).reshape(-1, 1))[:, 0],
+                             scaler.inverse_transform(np.quantile(forecast, q=0.975, axis=-1).reshape(-1, 1))[:, 0],
+                             alpha=0.2, edgecolor='#CC4F1B', facecolor='#FF9848', label='95%-PI')
+            plt.title('ForGAN Time Series Forecasting')
+            plt.legend()
+            plt.savefig('plots/sine/forecasting_forgan.png')
+            plt.show()
+
     else:
+        trained_model, validation_mse, val = train_model(model=model, data=train, cfg=cfg)
+        # trained_model.forecasting_horizon = len(test)-trained_model.window_size
+        forecast = trained_model.recurrent_forecast(np.expand_dims(test[:model.window_size], 0))
+        print(forecast.shape)
+        forecast_mean = np.mean(forecast, axis=-1)
+        forecast_var = np.std(forecast, axis=-1)
+        x_pred = np.linspace(model.window_size + 1, len(forecast_mean)+model.window_size, len(forecast_mean))
         plt.figure()
         plt.plot(np.linspace(1, trained_model.window_size+trained_model.forecasting_horizon,
                              trained_model.window_size+trained_model.forecasting_horizon),
@@ -112,6 +120,6 @@ def pipeline(model_path, model_name):
 
 
 if __name__ == '__main__':
-    model_path = 'results/sine/recurrentgan/minmax/rnn_epochs_1500_D_epochs_3_batch_size_32_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.001000/'
-    model_name = 'generator_1500.h5'
+    model_path = 'results/avocado/recurrentgan/minmax/rnn_epochs_30000_D_epochs_3_batch_size_32_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.000100/'
+    model_name = 'generator_30000.h5'
     pipeline(model_path, model_name)

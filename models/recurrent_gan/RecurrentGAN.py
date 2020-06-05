@@ -38,6 +38,10 @@ class RecurrentGAN(GAN):
         self.mc_forward_passes = cfg['mc_forward_passes']
 
         self.layers = cfg['layers']
+        if cfg['number_of_recurrent_layers']:
+            self.num_layers = cfg['number_of_recurrent_layers']
+        else:
+            self.num_layers = 1
         self.optimizer = Adam(cfg['learning_rate'], 0.5)
         self.loss_function = 'binary_crossentropy'
 
@@ -82,13 +86,15 @@ class RecurrentGAN(GAN):
 
         noise_inp = Input(shape=noise_shape)
         historic_inp = Input(shape=historic_shape)
-
+        hist = historic_inp
         if self.layers == 'lstm':
-            hist = LSTM(self.generator_nodes, return_sequences=False)(historic_inp)
-        elif self.layers == 'gru':
-            hist = GRU(self.generator_nodes, return_sequences=False)(historic_inp)
+            for i in range(self.num_layers-1):
+                hist = LSTM(self.generator_nodes, return_sequences=True)(hist)
+            hist = LSTM(self.generator_nodes, return_sequences=False)(hist)
         else:
-            hist = SimpleRNN(self.generator_nodes, return_sequences=False)(historic_inp)
+            for i in range(self.num_layers-1):
+                hist = SimpleRNN(self.generator_nodes, return_sequences=True)(hist)
+            hist = SimpleRNN(self.generator_nodes, return_sequences=False)(hist)
 
         x = Concatenate(axis=1)([hist, noise_inp])
         if self.dropout:
@@ -118,10 +124,12 @@ class RecurrentGAN(GAN):
         x = Concatenate(axis=1)([historic_inp, future_inp])
 
         if self.layers == 'lstm':
+            for i in range(self.num_layers-1):
+                x = LSTM(self.discriminator_nodes, return_sequences=True)(x)
             x = LSTM(self.discriminator_nodes, return_sequences=False)(x)
-        elif self.layers == 'gru':
-            x = GRU(self.discriminator_nodes, return_sequences=False)(x)
         else:
+            for i in range(self.num_layers-1):
+                x = SimpleRNN(self.discriminator_nodes, return_sequences=True)(x)
             x = SimpleRNN(self.discriminator_nodes, return_sequences=False)(x)
 
         if self.batch_norm:
@@ -214,6 +222,9 @@ class RecurrentGAN(GAN):
         return [np.mean(d_loss.history['loss']), np.mean(d_loss.history['acc'])]
 
     def fit(self, x, y, x_val=None, y_val=None, epochs=1, batch_size=32, verbose=1):
+        if len(y_val) > 1000:
+            y_val = y_val[:1000]
+            x_val = x_val[:1000]
         half_batch = int(batch_size / 2)
         forecast_mse = np.zeros(epochs)
         G_loss = np.zeros(epochs)

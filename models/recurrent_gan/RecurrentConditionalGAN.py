@@ -39,6 +39,10 @@ class RecurrentConditionalGAN(GAN):
         self.mixed_batches = cfg['mixed_batches']
         self.mc_forward_passes = cfg['mc_forward_passes']
 
+        if cfg['number_of_recurrent_layers']:
+            self.num_layers = cfg['number_of_recurrent_layers']
+        else:
+            self.num_layers = 1
         self.layers = cfg['layers']
         self.optimizer = Adam(cfg['learning_rate'], 0.5)
         self.loss_function = 'binary_crossentropy'
@@ -83,13 +87,15 @@ class RecurrentConditionalGAN(GAN):
         noise_inp = Input(shape=(self.noise_vector_size,))
         historic_inp = Input(shape=(self.window_size, 1))
         conditional_inp = Input(shape=(108,))
-
+        hist = historic_inp
         if self.layers == 'lstm':
-            hist = LSTM(self.generator_nodes, return_sequences=False)(historic_inp)
-        elif self.layers == 'gru':
-            hist = GRU(self.generator_nodes, return_sequences=False)(historic_inp)
+            for i in range(self.num_layers - 1):
+                hist = LSTM(self.generator_nodes, return_sequences=True)(hist)
+            hist = LSTM(self.generator_nodes, return_sequences=False)(hist)
         else:
-            hist = SimpleRNN(self.generator_nodes, return_sequences=False)(historic_inp)
+            for i in range(self.num_layers - 1):
+                hist = SimpleRNN(self.generator_nodes, return_sequences=True)(hist)
+            hist = SimpleRNN(self.generator_nodes, return_sequences=False)(hist)
         condition = Dense(108, activation='relu')(conditional_inp)
         # condition = Flatten()(condition)
 
@@ -119,10 +125,12 @@ class RecurrentConditionalGAN(GAN):
         x = Concatenate(axis=1)([historic_inp, future_inp])
 
         if self.layers == 'lstm':
+            for i in range(self.num_layers-1):
+                x = LSTM(self.discriminator_nodes, return_sequences=True)(x)
             x = LSTM(self.discriminator_nodes, return_sequences=False)(x)
-        elif self.layers == 'gru':
-            x = GRU(self.discriminator_nodes, return_sequences=False)(x)
         else:
+            for i in range(self.num_layers-1):
+                x = SimpleRNN(self.discriminator_nodes, return_sequences=True)(x)
             x = SimpleRNN(self.discriminator_nodes, return_sequences=False)(x)
 
         if self.batch_norm:
