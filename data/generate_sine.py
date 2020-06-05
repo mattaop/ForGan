@@ -11,8 +11,10 @@ def generate_sine_data(num_points=2000, plot=False):
     mean = 0
     std = 0.1
     noise = np.random.normal(mean, std, num_points)
+    scale = scipy.stats.norm.ppf(0.75)*std*1+1
+    scale = 1
 
-    y = np.sin(x*np.pi/6)/(scipy.stats.norm.ppf(0.75)*std*1+1) + noise
+    y = np.sin(x*np.pi/6)/scale + noise
     if plot:
         plt.hist(noise, color='blue', edgecolor='black',
                  bins=int(50), density=True)

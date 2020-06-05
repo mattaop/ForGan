@@ -21,7 +21,7 @@ def print_results(folder):
     for sub_folder in sub_folders:
         try:
             df, cfg = read_files(sub_folder)
-            print(cfg['layers'] + "  |  %d  |    %d    |     %d     |     %d     |    %d    |    %d   | %.2f |%.2f| %.2f| %.2f| "
+            print(cfg['layers'] + "  |  %d  |    %d    |     %d     |     %d     |    %d    |    %d   | %.4f |%.4f| %.2f| %.2f| "
                   % (cfg['epochs'], cfg['discriminator_epochs'], cfg['noise_vector_size'], cfg['batch_size'], cfg['generator_nodes'],
                      cfg['discriminator_nodes'], np.mean(df['mse'])*1, np.mean(df['mase'])*1,
                      np.mean(df['coverage_80'])*100, np.mean(df['coverage_95'])*100))
@@ -30,7 +30,7 @@ def print_results(folder):
 
 
 def main():
-    folder = 'results/oslo/recurrentgan/minmax'
+    folder = 'results/oslo/rnn/minmax'
     print_results(folder=folder)
 
 

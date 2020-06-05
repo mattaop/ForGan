@@ -33,6 +33,10 @@ def symmetric_mean_absolute_percentage_error(y_true, y_pred):
     return 2 * 100 * np.mean(diff)
 
 
+def pinball_loss(upper_limits, lower_limits, actual_values):
+    pass
+
+
 def sliding_window_smape(forecast, actual_values, forecast_horizon):
     f_smape = np.zeros(forecast_horizon)
     for i in range(forecast_horizon):
@@ -55,8 +59,43 @@ def compute_naive_error(training_data, seasonality=1, forecast_horizon=1):
         # print('Forecast horizon:', i, ', Look back:', look_back)
         for j in range(len(training_data) - look_back):
             temp_error += np.abs(training_data[j + look_back] - training_data[j])
-        naive_error[i] = temp_error/(len(training_data) - look_back)
+        naive_error[i] = temp_error/(len(training_data) - look_back - 1)
     return naive_error
+
+
+def indicator_function(larger, lower):
+    if larger > lower:
+        return 1
+    else:
+        return 0
+
+
+def mean_scaled_interval_score(y, u, l, alpha=0.05, h=1, naive_error=1):
+    """
+
+    :param y: Real values
+    :param u: Upper bound of prediction interval
+    :param l: Lower bound of prediction interval
+    :param alpha: Significance level
+    :param h: Forecast horizon of the h-step forecast
+    :param naive_error: Seasonal error of last-season-prediciton
+    :return: mean scaled interval score
+    """
+    if h > 1:
+        mean_interval_score = np.zeros(h)
+        for i in range(h):
+            interval_score = np.zeros(len(y[i:, 0]))
+            for j in range(len(y[i:, 0])):
+                interval_score[j] = u[j, i]-l[j, i] + 2/alpha * (l[j, i]-y[i+j]) * indicator_function(larger=l[j, i],
+                                                                                                    lower=y[i+j]) \
+                                  + 2/alpha * (y[i+j] - u[j, i]) * indicator_function(larger=y[i+j], lower=u[j, i])
+            mean_interval_score[i] = np.mean(interval_score)/naive_error[i]
+
+        return mean_interval_score
+    else:
+        interval_score = u - l + 2 / alpha * (l - y) * indicator_function(larger=l, lower=y) \
+                          + 2 / alpha * (y - u) * indicator_function(larger=y, lower=u)
+        return interval_score/naive_error
 
 
 def print_coverage(mean, uncertainty, actual_values):

@@ -8,13 +8,13 @@ from keras.optimizers import Adam
 import keras.backend as K
 from keras.models import load_model
 import tensorflow as tf
-from tqdm import tqdm
+from tqdm import tqdm, trange
 import time
 
 from config.load_config import load_config_file
 from data.generate_noise import generate_noise
 from utility.split_data import split_sequence
-from utility.compute_statistics import compute_coverage
+from utility.compute_statistics import compute_coverage, sliding_window_coverage
 from models.feed_forward_gan.GAN import GAN
 
 
@@ -93,8 +93,8 @@ class RecurrentGAN(GAN):
         x = Concatenate(axis=1)([hist, noise_inp])
         if self.dropout:
             x = Dropout(0.2)(x, training=True)
-
-        # x = BatchNormalization()(x)
+        #if self.batch_norm:
+        #    x = BatchNormalization()(x)
         x = Dense(self.generator_nodes+self.noise_vector_size)(x)
         x = ReLU()(x)
         if self.dropout:
@@ -279,13 +279,23 @@ class RecurrentGAN(GAN):
                         x_input = np.vstack([np.expand_dims(historic_time_series[j], axis=0)] * 100)
 
                         forecasts[j] = self.generator.predict([x_input, generator_noise]).transpose()
-                    coverage_80_pi.append(compute_coverage(actual_values=future_time_series[:, :, 0],
-                                                           upper_limits=np.quantile(forecasts, q=0.9, axis=-1),
-                                                           lower_limits=np.quantile(forecasts, q=0.1, axis=-1)))
-                    coverage_95_pi.append(compute_coverage(actual_values=future_time_series[:, :, 0],
-                                                           upper_limits=np.quantile(forecasts, q=0.975, axis=-1),
-                                                           lower_limits=np.quantile(forecasts, q=0.025, axis=-1)))
-                    validation_mse.append(mean_squared_error(future_time_series[:, :, 0], np.mean(forecasts, axis=-1)))
+                    if self.output_size > 1:
+                        coverage_80_pi.append(sliding_window_coverage(actual_values=future_time_series,
+                                                                      upper_limits=np.quantile(forecasts, q=0.9, axis=-1),
+                                                                      lower_limits=np.quantile(forecasts, q=0.1, axis=-1)))
+                        coverage_95_pi.append(sliding_window_coverage(actual_values=future_time_series[:, :, 0],
+                                                                      upper_limits=np.quantile(forecasts, q=0.975, axis=-1),
+                                                                      lower_limits=np.quantile(forecasts, q=0.025, axis=-1)))
+                        validation_mse.append(
+                            mean_squared_error(future_time_series.flatten(), np.mean(forecasts, axis=-1).flatten()))
+                    else:
+                        coverage_80_pi.append(compute_coverage(actual_values=future_time_series[:, :, 0],
+                                                               upper_limits=np.quantile(forecasts, q=0.9, axis=-1),
+                                                               lower_limits=np.quantile(forecasts, q=0.1, axis=-1)))
+                        coverage_95_pi.append(compute_coverage(actual_values=future_time_series[:, :, 0],
+                                                               upper_limits=np.quantile(forecasts, q=0.975, axis=-1),
+                                                               lower_limits=np.quantile(forecasts, q=0.025, axis=-1)))
+                        validation_mse.append(mean_squared_error(future_time_series[:, :, 0], np.mean(forecasts, axis=-1)))
 
                     print("%d [D loss: %f, acc.: %.2f%%] [G loss: %f, forecast mse: %f][Mean forecast mse: %f, "
                           "80%%-PI: %.2f%%, 95%%-PI: %.2f%%]" %
@@ -297,13 +307,24 @@ class RecurrentGAN(GAN):
                         generator_noise = self._generate_noise(100)
                         x_input = np.vstack([np.expand_dims(x_val[j], axis=0)] * 100)
                         forecasts[j] = self.generator.predict([x_input, generator_noise]).transpose()
-                    coverage_80_pi.append(compute_coverage(actual_values=y_val,
-                                                           upper_limits=np.quantile(forecasts, q=0.9, axis=-1),
-                                                           lower_limits=np.quantile(forecasts, q=0.1, axis=-1)))
-                    coverage_95_pi.append(compute_coverage(actual_values=y_val,
-                                                           upper_limits=np.quantile(forecasts, q=0.975, axis=-1),
-                                                           lower_limits=np.quantile(forecasts, q=0.025, axis=-1)))
-                    validation_mse.append(mean_squared_error(y_val[:, 0], np.mean(forecasts, axis=-1)))
+                    if self.output_size > 1:
+                        coverage_80_pi.append(sliding_window_coverage(actual_values=y_val,
+                                                                      upper_limits=np.quantile(forecasts, q=0.9, axis=-1),
+                                                                      lower_limits=np.quantile(forecasts, q=0.1, axis=-1),
+                                                                      forecast_horizon=self.output_size).mean())
+                        coverage_95_pi.append(sliding_window_coverage(actual_values=y_val,
+                                                                      upper_limits=np.quantile(forecasts, q=0.975, axis=-1),
+                                                                      lower_limits=np.quantile(forecasts, q=0.025, axis=-1),
+                                                                      forecast_horizon=self.output_size).mean())
+                        validation_mse.append(mean_squared_error(y_val.flatten(), np.mean(forecasts, axis=-1).flatten()))
+                    else:
+                        coverage_80_pi.append(compute_coverage(actual_values=y_val,
+                                                               upper_limits=np.quantile(forecasts, q=0.9, axis=-1),
+                                                               lower_limits=np.quantile(forecasts, q=0.1, axis=-1)))
+                        coverage_95_pi.append(compute_coverage(actual_values=y_val,
+                                                               upper_limits=np.quantile(forecasts, q=0.975, axis=-1),
+                                                               lower_limits=np.quantile(forecasts, q=0.025, axis=-1)))
+                        validation_mse.append(mean_squared_error(y_val[:, 0], np.mean(forecasts, axis=-1)))
                     print("%d [D loss: %f, acc.: %.2f%%] [G loss: %f, forecast mse: %f][Validation mse: %f, "
                           "80%%-PI: %.2f%%, 95%%-PI: %.2f%%]" %
                           (epoch, d_loss[0], 100 * d_loss[1], g_loss, forecast_mse[epoch],
@@ -333,7 +354,7 @@ class RecurrentGAN(GAN):
 
     def forecast(self, x):
         forecast = np.zeros([x.shape[0], self.mc_forward_passes, self.output_size])
-        for i in tqdm(range(x.shape[0])):
+        for i in trange(x.shape[0]):
             generator_noise = self._generate_noise(batch_size=self.mc_forward_passes)
             x_input = np.vstack([np.expand_dims(x[i], axis=0)] * self.mc_forward_passes)
             forecast[i] = self.generator.predict([x_input, generator_noise])
@@ -355,10 +376,10 @@ class RecurrentGAN(GAN):
             x_input[:, self.window_size+i] = self.generator.predict([x_input[:, i:self.window_size+i], generator_noise])
         return x_input[:, -self.forecasting_horizon:].transpose()[0]
 
-    def monte_carlo_forecast(self, data, steps=1, plot=False):
+    def monte_carlo_forecast(self, data, steps=1, plot=False, disable_pbar=False):
         time_series = np.expand_dims(data, axis=0)
         forecast = np.zeros([steps, self.forecasting_horizon, self.mc_forward_passes])
-        for i in tqdm(range(steps)):
+        for i in trange(steps, disable=disable_pbar):
             if self.recurrent_forecasting:
                 forecast[i] = self.recurrent_forecast(time_series[:, i:self.window_size + i])
             else:

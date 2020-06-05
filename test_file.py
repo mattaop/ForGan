@@ -4,8 +4,11 @@ from sklearn.metrics import mean_squared_error
 from sklearn.preprocessing import MinMaxScaler
 
 
-num_points = 1000
+num_points = 1000000
 noise = np.random.normal(0, 0.1, num_points)
+noise_2 = np.random.normal(0, 0.1, num_points)
+print(np.mean(np.abs(noise - noise_2)))
+print(np.mean(np.abs(noise)))
 x = np.linspace(1, num_points, num_points)
 y = np.sin(x*np.pi/6) + noise
 predictions = np.sin(x*np.pi/6)

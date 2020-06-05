@@ -38,7 +38,6 @@ from time_series_pipeline import configure_model, load_data, plot_results
 from time_series_pipeline_with_validation import test_model, compute_validation_error
 
 
-
 def train_model(model, data, cfg):
     # Split data in training and validation set
     train, val = data[:-int(len(data)*cfg['val_split'])], data[-int(model.window_size+len(data)*cfg['val_split']):]
@@ -47,17 +46,20 @@ def train_model(model, data, cfg):
     x_train, y_train = split_sequence(train, model.window_size, model.output_size)
     x_val, y_val = split_sequence(val, model.window_size, model.output_size)
 
-    validation_mse = compute_validation_error(model, val)
+    validation_mse = compute_validation_error(model, x_val, y_val)
 
     return model, validation_mse, val
 
 
 def pipeline(model_path, model_name):
     cfg = load_config_file(model_path+'config.yml')
+    cfg['mc_forward_passes'] = 5000
     forecast_mse_list, forecast_smape_list, forecast_mase_list = [], [], []
     validation_mse_list, forecast_std_list = [], []
     w_80_list, w_95_list = [], []
     c_80_list, c_95_list = [], []
+    msis_80_list, msis_95_list = [], []
+
     for i in range(1):
         model = configure_model(cfg=cfg)
         model.generator = load_model(model_path+model_name)
@@ -68,20 +70,17 @@ def pipeline(model_path, model_name):
         trained_model, validation_mse, val = train_model(model=model, data=train, cfg=cfg)
         training_time = time.time() - start_time
         test_model(model=trained_model, data=val, validation_mse=validation_mse, cfg=cfg, naive_error=naive_error,
-                   scaler=scaler, plot=False, file_name="/validation_results_" + model_name + ".txt",   minmax=(np.max(
+                   scaler=scaler, plot=False, file_name="/validation_results_" + model_name + ".txt",   min_max=(np.max(
                                                                        scaler.inverse_transform(train)) - np.min(
                                                                        scaler.inverse_transform(train))) /
                                                                           (np.max(train) - np.min(train)))
-        mse, smape, mase, std, c_80, c_95, w_80, w_95 = test_model(model=trained_model, data=test,
-                                                                   validation_mse=validation_mse, cfg=cfg,
-                                                                   naive_error=naive_error, scaler=scaler, plot=False,
-                                                                   file_name="/test_results" + model_name + ".txt",
-                                                                   minmax=(np.max(
-                                                                       scaler.inverse_transform(train)) - np.min(
-                                                                       scaler.inverse_transform(train))) /
-                                                                          (np.max(train) - np.min(train))
-                                                                   )
-
+        mse, smape, mase, std, c_80, c_95, w_80, w_95, msis_80, msis_95 \
+            = test_model(model=trained_model, data=test, validation_mse=validation_mse, cfg=cfg,
+                         naive_error=naive_error, scaler=scaler, plot=False,
+                         file_name="/test_results_" + model_name + ".txt",
+                         min_max=(np.max(scaler.inverse_transform(train)) - np.min(scaler.inverse_transform(train)))
+                                 / (np.max(train) - np.min(train)))
+        msis_80_list.append(msis_80), msis_95_list.append(msis_95)
         forecast_mse_list.append(mse), forecast_smape_list.append(smape), forecast_mase_list.append(mase)
         validation_mse_list.append(validation_mse)
         forecast_std_list.append(std)
@@ -107,13 +106,16 @@ def pipeline(model_path, model_name):
           ', width:', np.mean(np.mean(np.array(w_80_list), axis=0)),
           # '\n Forecast horizon:', np.mean(np.array(c_80_list), axis=0)
           )
+    print('80%-prediction interval MSIS:', np.mean(np.mean(msis_80_list, axis=0)))
+
     print('95%-prediction interval coverage - Mean:',  np.mean(np.mean(c_95_list, axis=0)),
           ', width:', np.mean(np.mean(np.array(w_95_list), axis=0)),
           # '\n Forecast horizon:', np.mean(np.array(c_95_list), axis=0)
           )
+    print('95%-prediction interval MSIS:', np.mean(np.mean(msis_95_list, axis=0)))
 
 
 if __name__ == '__main__':
-    model_path = 'results/oslo/recurrentgan/minmax/rnn_epochs_5000_D_epochs_10_batch_size_32_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.001000/'
-    model_name = 'generator_best_900.h5'
+    model_path = 'results/sine/recurrentgan/minmax/rnn_epochs_1500_D_epochs_3_batch_size_32_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.001000/'
+    model_name = 'generator_1500.h5'
     pipeline(model_path, model_name)

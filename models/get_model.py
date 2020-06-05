@@ -1,10 +1,9 @@
 from models.feed_forward_gan import GAN, WGAN, DSGAN
 from models.conv_gan import ConvGAN, ConvWGAN
 from models.recurrent_gan import RecurrentGAN, RecurrentWGAN, RecurrentDSGAN, RecurrentConvGAN, RecurrentConvWGAN, \
-    RecurrentConvDSGAN
+    RecurrentConvDSGAN, RecurrentConditionalGAN
 from models.baseline_models import RNN, ES, ARIMA
 from models.hybrid_gan import ESWGAN, ESRecurrentWGAN
-
 
 def get_gan(cfg):
     model_name = cfg['model_name']
@@ -47,6 +46,9 @@ def get_gan(cfg):
         else:
             print('Model GAN has no loss:', loss)
             AttributeError()
+    elif model_name.lower() == 'recurrentconditionalgan':
+        print('Model: RecurrentConditionalGAN, Loss: Binary Crossentropy loss')
+        model = RecurrentConditionalGAN.RecurrentConditionalGAN(cfg)
     elif model_name.lower() == 'recurrentconvgan':
         if loss.lower() in ['kl', 'kl-div', 'kl-divergence', 'kl divergence', None]:
             print('Model: RecurrentConvGAN, Loss: Binary Crossentropy loss')

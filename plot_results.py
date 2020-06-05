@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import cycler
 
-show_plot = True
+show_plot = False
 #plt.rcParams['axes.prop_cycle'] = plt.cycler(color=['006BA4', 'FF800E', 'ABABAB', '595959', '5F9ED1', 'C85200',
 #                                                    '898989', 'A2C8EC', 'FFBC79', 'CFCFCF'])
 
@@ -16,6 +16,7 @@ def read_training_files(file_name, data):
         df = pd.read_csv(file_name + '/validation_results.txt', header=0)
     else:
         df = pd.read_csv(file_name + '/test_results.txt', header=0)
+
     return df
 
 
@@ -37,6 +38,7 @@ def plot_results(save_file, model_paths, file_labels, title, x_label, y_label, v
     plt.ylabel(y_label)
     plt.legend()
     plt.savefig('plots/' + save_file)
+    # plt.show()
     if show_plot:
         plt.show()
 
@@ -85,6 +87,19 @@ def plot_test_results(model_paths, file_labels, title, save_file='Test', data_se
     plot_results(save_file=data_set + '/' + save_file + '_test_95', model_paths=['results/' + data_set + '/' + s for s in model_paths], file_labels=file_labels,
                  title=title[4], x_label='Forecast horizon', y_label='Coverage', value='coverage_95', data='test',
                  plot_rate=1)
+    plot_results(save_file=data_set + '/' + save_file + '_test_80w', model_paths=['results/' + data_set + '/' + s for s in model_paths], file_labels=file_labels,
+                 title=title[5], x_label='Forecast horizon', y_label='Width', value='width_80', data='test',
+                 plot_rate=1)
+    plot_results(save_file=data_set + '/' + save_file + '_test_95w', model_paths=['results/' + data_set + '/' + s for s in model_paths], file_labels=file_labels,
+                 title=title[6], x_label='Forecast horizon', y_label='Width', value='width_95', data='test',
+                 plot_rate=1)
+
+    plot_results(save_file=data_set + '/' + save_file + '_test_80msis', model_paths=['results/' + data_set + '/' + s for s in model_paths], file_labels=file_labels,
+                 title=title[7], x_label='Forecast horizon', y_label='Mean Scaled Interval Score (MSIS)', value='msis_80', data='test',
+                 plot_rate=1)
+    plot_results(save_file=data_set + '/' + save_file + '_test_95msis', model_paths=['results/' + data_set + '/' + s for s in model_paths], file_labels=file_labels,
+                 title=title[8], x_label='Forecast horizon', y_label='Mean Scaled Interval Score (MSIS)', value='msis_95', data='test',
+                 plot_rate=1)
 
 
 def main():
@@ -130,9 +145,9 @@ def main():
     plot_training_results(model_paths=model_paths,
                           file_labels=labels,
                           save_file=save_file_as,
-                          title=['Training Mean Squared Error',
-                                 'Training 80% Prediction Interval Coverage',
-                                 'Training 95% Prediction Interval Coverage'],
+                          title=['Validation Mean Squared Error',
+                                 'Validation 80% Prediction Interval Coverage',
+                                 'Validation 95% Prediction Interval Coverage'],
                           plot_rate=25, data_set=data_set)
 
     plot_validation_results(model_paths=model_paths,
@@ -142,27 +157,37 @@ def main():
                                    'Forecast Validation Symmetric Mean Absolute Percentage Error',
                                    'Forecast Mean Absolute Scaled Error',
                                    'Forecast Validation 80% Prediction Interval Coverage',
-                                   'Forecast Validation 95% Prediction Interval Coverage'],
+                                   'Forecast Validation 95% Prediction Interval Coverage'
+                                   ],
                             data_set=data_set)
 
-    model_paths = ['arima',
+    model_paths_oslo = ['arima',
                    'es',
-                   'rnn/minmax/rnn_epochs_2000_D_epochs_5_batch_size_32_noise_vec_100_gnodes_64_dnodes_64_loss_kl_lr_0.001000',
-                   'recurrentgan/minmax/rnn_epochs_1500_D_epochs_5_batch_size_32_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.001000'
-                           ]
+                   'rnn/minmax/rnn_epochs_500_D_epochs_3_batch_size_64_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.001000',
+                   'recurrentgan/minmax/rnn_epochs_5000_D_epochs_10_batch_size_64_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.001000']
+    model_paths_sine = ['arima',
+                       'es',
+                       'rnn/minmax/rnn_epochs_2000_D_epochs_3_batch_size_64_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.001000',
+                       'recurrentgan/minmax/rnn_epochs_1500_D_epochs_3_batch_size_32_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.001000']
     labels = ['ARIMA',
-              'Exponential Smoothing',
-              'MC Dropout',
+              'ETS',
+              'MC dropout',
               'ForGAN']
     save_file_as = 'compare'
-    plot_test_results(model_paths=model_paths,
+    data_set = 'oslo'
+    plot_test_results(model_paths=model_paths_oslo,
                       file_labels=labels,
                       save_file=save_file_as,
                       title=['Forecast Mean Squared Error',
                              'Forecast Symmetric Mean Absolute Percentage Error',
                              'Forecast Mean Absolute Scaled Error',
                              'Forecast 80% Prediction Interval Coverage',
-                             'Forecast 95% Prediction Interval Coverage'],
+                             'Forecast 95% Prediction Interval Coverage',
+                             'Forecast 80% Prediction Interval Width',
+                             'Forecast 95% Prediction Interval Width',
+                             'Forecast 80% Mean Scaled Interval Score',
+                             'Forecast 95% Mean Scaled Interval Score'
+                             ],
                       data_set=data_set)
 
 

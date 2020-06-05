@@ -1,10 +1,10 @@
-model_name: RecurrentGAN # RNN, ES, ARIMA, GAN, ConvGAN, RecurrentGAN, RecurrentConvGAN, RecurrentConvDSGAN
+model_name: RecurrentGAN # RNN, ES, ARIMA, GAN, ConvGAN, RecurrentGAN, RecurrentConvGAN, RecurrentConvDSGAN, RecurrentConditionalGAN
 loss_function: kl # kl, w, ds
 
-epochs: 1000
+epochs: 15
 batch_size: 32
-learning_rate: 0.001
-discriminator_epochs: 10
+learning_rate: 0.0001
+discriminator_epochs: 5
 
 layers: rnn  # rnn, lstm, gru
 generator_nodes: 16
@@ -14,8 +14,8 @@ dropout: False # True, False
 noise_vector_size: 100
 noise_type: gaussian # gaussian (default), uniform
 
-window_size: 24
-forecast_horizon: 24
+window_size: 52
+forecast_horizon: 13
 recurrent_forecasting: True # True, False
 mc_forward_passes: 1000
 plot_rate: 25
@@ -23,7 +23,7 @@ plot_rate: 25
 print_coverage: True # True, False, Will slow down training, but print coverage during training
 save_model_interval: 100
 
-data_source: oslo # sine, oslo, australia
+data_source: avocado # sine, oslo, australia, avocado
 val_split: 0.1
 test_split: 0.2
 scaler: MinMax # MinMax (default), Robust, Standard

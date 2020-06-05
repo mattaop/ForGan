@@ -24,6 +24,7 @@ recurrent_forecasting: true
 results_path: results/sine/recurrentgan/minmax/rnn_epochs_1500_D_epochs_1_batch_size_32_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.001000
 save_model_interval: 100
 scaler: MinMax
+seasonality: 12
 test_split: 0.4
 val_split: 0.125
 window_size: 24

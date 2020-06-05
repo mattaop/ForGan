@@ -29,12 +29,12 @@ from tqdm import tqdm
 from sklearn.metrics import mean_squared_error, mutual_info_score, normalized_mutual_info_score
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
 import seaborn as sns
-
+import pandas as pd
 from config.load_config import load_config_file, write_config_file
 from models.get_model import get_gan
 from utility.split_data import split_sequence
 from data.generate_sine import generate_sine_data
-from data.load_data import load_oslo_temperature, load_australia_temperature
+from data.load_data import load_oslo_temperature, load_australia_temperature, load_avocado
 from utility.compute_statistics import *
 
 
@@ -61,39 +61,53 @@ def load_data(cfg, window_size):
         data = load_oslo_temperature()
     elif cfg['data_source'].lower() == 'australia':
         data = load_australia_temperature()
-
+    elif cfg['data_source'].lower() == 'avocado':
+        data = load_avocado()
+        print(data)
     else:
         return None
     print('Data shape', data.shape)
     train = data[:-int(len(data)*cfg['test_split'])]
-    print(np.max(train)-np.min(train))
     test = data[-int(len(data)*cfg['test_split']+window_size):]
-    original_scale = np.max(train)-np.min(train)
-    if cfg['model_name'].lower() == 'es':
-        scaler = MinMaxScaler(feature_range=(1, 2))
-        train = scaler.fit_transform(train)
-        test = scaler.transform(test)
-        print(np.max(train), np.min(train))
-    else:
-        train, test, scaler = scale_data(train, test, cfg)
-    print(original_scale/(np.max(train)-np.min(train)))
+    train, test, scaler = scale_data(train, test, cfg)
+    print(train.shape)
     """
-    print(np.min(train), np.max(train))
-    plt.plot(train)
-    plt.show()
+    for columnName, columnData in train.iteritems():
+        #plt.figure()
+        plt.title(columnName[0] + ' of ' + columnName[2] + ' avocado for ' + columnName[1])
+        plt.plot(test[columnName], label='Test')
+        plt.plot(train[columnName],  label='Train')
+        plt.legend()
+        plt.savefig('plots/avocado/timeseries/'+ columnName[1]+'_'+columnName[2])
     """
     return train, test, scaler
 
 
 def scale_data(train, test, cfg):
-    if cfg['scaler'].lower() == 'robust':
+    if cfg['model_name'].lower() == 'es':
+        scaler = MinMaxScaler(feature_range=(1, 2))
+    elif cfg['scaler'].lower() == 'robust':
         scaler = RobustScaler()
     elif cfg['scaler'].lower() == 'standard':
         scaler = StandardScaler()
     else:
         scaler = MinMaxScaler(feature_range=(0, 1))
-    train = scaler.fit_transform(train)
-    test = scaler.transform(test)
+    if cfg['data_source'] == 'avocado':
+        df_train = train
+        df_test = test
+        train = pd.DataFrame(columns=df_train.columns.values, index=df_train.index)
+        test = pd.DataFrame(columns=df_test.columns.values, index=df_test.index)
+        scalers = []
+        for columnName, columnData in train.iteritems():
+            temp_scaler = scaler
+            train[columnName] = temp_scaler.fit_transform(df_train[columnName].values.reshape(-1, 1))[:, 0]
+            test[columnName] = temp_scaler.transform(df_test[columnName].values.reshape(-1, 1))[:, 0]
+
+            scalers.append(temp_scaler)
+        scaler = scalers
+    else:
+        train = scaler.fit_transform(train)
+        test = scaler.transform(test)
     return train, test, scaler
 
 
@@ -180,8 +194,7 @@ def test_model(model, data, plot=True):
     return forecast_mse, forecast_smape, coverage_80_1, coverage_95_1, coverage_80_2, coverage_95_2, width_80_1, width_95_1, width_80_2, width_95_2, forecast_std.mean(axis=0)
 
 
-def pipeline():
-    cfg = load_config_file('config\\config.yml')
+def time_series_pipeline(cfg):
     forecast_mse_list, forecast_smape_list = [], []
     width_80_1_list, width_95_1_list, width_80_2_list, width_95_2_list = [], [], [], []
     coverage_80_1_list, coverage_95_1_list, coverage_80_2_list, coverage_95_2_list = [], [], [], []
@@ -245,5 +258,10 @@ def pipeline():
             f.write("{0},{1},{2},{3}\n".format(mse, smap, c_80, c_95, w_80, w_95))
 
 
+def main():
+    cfg = load_config_file('config\\config.yml')
+    time_series_pipeline(cfg)
+
+
 if __name__ == '__main__':
-    pipeline()
+    main()

@@ -16,6 +16,10 @@ def load_config_file(file_name, print_config=False):
                             (cfg['epochs'], cfg['discriminator_epochs'], cfg['batch_size'], cfg['noise_vector_size'],
                              cfg['generator_nodes'], cfg['discriminator_nodes'], cfg['loss_function'].lower(),
                              cfg['learning_rate'])
+    if cfg['data_source'].lower() in ['sine', 'oslo']:
+        cfg['seasonality'] = 12
+    elif cfg['data_source'].lower() in ['avocado']:
+        cfg['seasonality'] = 52
     return cfg
 
 

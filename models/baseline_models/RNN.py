@@ -9,7 +9,7 @@ import keras.backend as K
 import tensorflow as tf
 import seaborn as sns
 from sklearn.preprocessing import normalize
-from tqdm import tqdm
+from tqdm import tqdm, trange
 
 from data.generate_sine import generate_sine_data
 from utility.split_data import split_sequence
@@ -88,11 +88,11 @@ class RNN:
             x_input[:, self.window_size+i] = np.array(func([x_input[:, i:self.window_size+i], 0.4])[0])
         return x_input[:, -self.forecasting_horizon:].transpose()[0]
 
-    def monte_carlo_forecast(self, data, steps=1, plot=False):
+    def monte_carlo_forecast(self, data, steps=1, plot=False, disable_pbar=False):
         time_series = np.expand_dims(data, axis=0)
         forecast = np.zeros([steps, self.forecasting_horizon, self.mc_forward_passes])
         func = K.function([self.model.layers[0].input, K.learning_phase()], [self.model.layers[-1].output])
-        for i in tqdm(range(steps)):
+        for i in trange(steps, disable=disable_pbar):
             if self.recurrent_forecasting:
                 forecast[i] = self.recurrent_forecast(func, time_series[:, i:self.window_size + i])
             else:
