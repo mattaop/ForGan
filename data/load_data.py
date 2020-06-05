@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from config.load_config import get_path
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.linear_model import LinearRegression
-
+from skimage.measure import block_reduce
 
 def load_raw_data(file_name=''):
     path = get_path()
@@ -42,14 +42,19 @@ def load_australia_temperature():
     return df["y"].values.reshape(-1, 1)
 
 
-def load_electricity():
-    data_array = np.load('data_files/electricity.npy')
-    idx = pd.DatetimeIndex(freq="h", start="2018-01-01", periods=26136)
+def load_electricity(project_path=None):
+    if not project_path:
+        path = get_path()
+        project_path = path['project path']
+    data_array = np.load(project_path + 'data//data_files/electricity.npy')
+    #df = pd.read_csv(project_path + 'data//data_files//LD2011_2014.txt', sep=';', low_memory=False)
+    data_array_reduce = block_reduce(data_array, block_size=(1, 24), func=np.mean, cval=np.mean(data_array))
+    idx = pd.DatetimeIndex(freq="d", start="2018-01-01", periods=data_array_reduce.shape[1])
     # df = pd.DataFrame(data_array)
-    df = pd.DataFrame(data=data_array.transpose(), index=idx, columns=np.arange(0, 370))
+    df = pd.DataFrame(data=data_array_reduce.transpose(), index=idx, columns=map(str, np.arange(0, 370)))
 
     print(df.shape)
-    return df
+    return df.loc[:, '0':'20']
 
 
 def load_traffic():
@@ -78,7 +83,10 @@ def load_avocado(project_path=None):
 
 
 if __name__ == "__main__":
-    data = load_oslo_temperature(project_path="C:\\Users\\mathi\\PycharmProjects\\gan\\")
+    data = load_electricity(project_path="C:\\Users\\mathi\\PycharmProjects\\gan\\")
+    print(data.columns.values)
+    print(data.loc[:, '0':'20'].shape)
+    """
     data = data[:int(len(data)*0.8)]
     print(data.shape)
     x = np.linspace(1, len(data), len(data)).reshape(-1, 1)
@@ -96,3 +104,4 @@ if __name__ == "__main__":
     #print(data[('AveragePrice', 'TotalUS', 'organic')].values.reshape(-1, 1))
     #plt.plot(data[('AveragePrice', 'TotalUS', 'organic')])
     #plt.show()
+    """

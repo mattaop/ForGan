@@ -85,15 +85,18 @@ def time_series_avocado_pipeline(cfg):
                                                                         batch_size=cfg['batch_size'], verbose=0)
     i = 0
     for columnName, columnData in tqdm(df_train.iteritems(), total=df_train.columns.shape[0]):
-        print(columnName[0], columnName[1], columnName[2])
         train = df_train[columnName].values.reshape(-1, 1)
         test = df_test[columnName].values.reshape(-1, 1)
         scaler = scalers[i]
         naive_error = compute_naive_error(scaler.inverse_transform(train), seasonality=cfg['seasonality'],
                                           forecast_horizon=model.forecasting_horizon)
         start_time = time.time()
-        validation_name = "/" + columnName[1] + "_" + columnName[2] + "_validation_results.txt"
-        test_name = "/" + columnName[1] + "_" + columnName[2] + "_test_results.txt"
+        if cfg['data_source'] == 'avocado':
+            validation_name = "/" + columnName[1] + "_" + columnName[2] + "_validation_results.txt"
+            test_name = "/" + columnName[1] + "_" + columnName[2] + "_test_results.txt"
+        else:
+            validation_name = "/" + columnName + "_validation_results.txt"
+            test_name = "/" + columnName + "_test_results.txt"
 
         training_time = time.time() - start_time
         test_model(model=trained_model, data=val[i], validation_mse=validation_mse, cfg=cfg, naive_error=naive_error,

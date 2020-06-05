@@ -48,9 +48,13 @@ def time_series_avocado_baseline_pipeline(cfg):
         trained_model = train_model(model=model, data=train, epochs=cfg['epochs'],
                                     batch_size=cfg['batch_size'], verbose=1)
         training_time = time.time() - start_time
+        if cfg['data_source'] == 'avocado':
+            test_file_name = "/" + columnName[1] + "_" + columnName[2] + "_test_results.txt"
+        else:
+            test_file_name = "/" + columnName + "_test_results.txt"
         mse, smape, mase, std, c_80, c_95, w_80, w_95, msis_80, msis_95 = \
             test_model(model=trained_model, data=test, naive_error=naive_error, scaler=scaler, cfg=cfg, plot=False,
-                       file_name="/" + columnName[1] + "_" + columnName[2] + "_test_results.txt",
+                       file_name=test_file_name,
                        min_max=(np.max(scaler.inverse_transform(train))-np.min(scaler.inverse_transform(train))) /
                                (np.max(train)-np.min(train)), disable_pbar=True)
         msis_80_list.append(msis_80), msis_95_list.append(msis_95)

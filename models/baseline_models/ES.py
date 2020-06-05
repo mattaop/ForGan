@@ -49,8 +49,8 @@ class ES:
                 if model_es.aicc < best_aicc:
                     best_model_parameters = [trend, season, damped]
                     best_aicc = model_es.aicc
-                print(trend, season, model_es.aicc)
-                print(model_es.params)
+                # print(trend, season, model_es.aicc)
+                # print(model_es.params)
         model_es = ExponentialSmoothing(train, seasonal_periods=self.seasonality,
                                         trend=best_model_parameters[0], seasonal=best_model_parameters[1],
                                         damped=best_model_parameters[2])

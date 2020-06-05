@@ -20,6 +20,8 @@ def load_config_file(file_name, print_config=False):
         cfg['seasonality'] = 12
     elif cfg['data_source'].lower() in ['avocado']:
         cfg['seasonality'] = 52
+    elif cfg['data_source'].lower() in ['electricity']:
+        cfg['seasonality'] = 365
     return cfg
 
 

@@ -34,7 +34,7 @@ from config.load_config import load_config_file, write_config_file
 from models.get_model import get_gan
 from utility.split_data import split_sequence
 from data.generate_sine import generate_sine_data
-from data.load_data import load_oslo_temperature, load_australia_temperature, load_avocado
+from data.load_data import load_oslo_temperature, load_australia_temperature, load_avocado, load_electricity
 from utility.compute_statistics import *
 
 
@@ -63,7 +63,9 @@ def load_data(cfg, window_size):
         data = load_australia_temperature()
     elif cfg['data_source'].lower() == 'avocado':
         data = load_avocado()
-        print(data)
+        print(data.shape)
+    elif cfg['data_source'].lower() == 'electricity':
+        data = load_electricity()
     else:
         return None
     print('Data shape', data.shape)
@@ -92,7 +94,7 @@ def scale_data(train, test, cfg):
         scaler = StandardScaler()
     else:
         scaler = MinMaxScaler(feature_range=(0, 1))
-    if cfg['data_source'] == 'avocado':
+    if cfg['data_source'] in ['avocado', 'electricity']:
         df_train = train
         df_test = test
         train = pd.DataFrame(columns=df_train.columns.values, index=df_train.index)
