@@ -35,7 +35,7 @@ def test_model(model, data, naive_error, cfg, scaler, plot=True, file_name="/tes
                disable_pbar=False):
     forecast = model.monte_carlo_forecast(data, steps=int(len(data) - model.window_size), plot=plot,
                                           disable_pbar=disable_pbar)  # steps x horizon x mc_forward_passes
-
+    print(forecast.shape)
     forecast_mse = sliding_window_mse(scaler.inverse_transform(forecast),
                                       scaler.inverse_transform(data[model.window_size:]),
                                       model.forecasting_horizon)
@@ -80,11 +80,9 @@ def test_model(model, data, naive_error, cfg, scaler, plot=True, file_name="/tes
     width_80 = np.mean(scaler.inverse_transform(model.pred_int_80[:, :, 1])
                        - scaler.inverse_transform(model.pred_int_80[:, :, 0]), axis=0)
     width_95 = np.mean(scaler.inverse_transform(model.pred_int_95[:, :, 1])
-                       - scaler.inverse_transform( model.pred_int_95[:, :, 0]), axis=0)
+                       - scaler.inverse_transform(model.pred_int_95[:, :, 0]), axis=0)
     if min_max:
         forecast_std = forecast_std * min_max
-        #width_80 = width_80 * min_max
-        #width_95 = width_95 * min_max
     file_path = cfg['results_path'] + file_name
 
     with open(file_path, "a") as f:
@@ -95,6 +93,28 @@ def test_model(model, data, naive_error, cfg, scaler, plot=True, file_name="/tes
                                                                                msis_95):
             f.write("{0},{1},{2},{3},{4},{5},{6},{7},{8},{9}\n".format(mse, smape, mase, std, c_80, c_95, w_80, w_95,
                                                                        m_80, m_95))
+    file_name = file_name.replace('_test_results.txt', '')
+
+    with open(cfg['results_path'] + file_name + "_forecast_one_step.csv", "w") as f:
+        f.write("forecast,pred_int_80_low,pred_int_80_high,pred_int_95_low,pred_int_95_high\n")
+        for (forecast_value, pred_int_80_low, pred_int_80_high, pred_int_95_low, pred_int_95_up) in \
+                zip(scaler.inverse_transform(forecast)[:, 0],
+                    scaler.inverse_transform(model.pred_int_80[:, :, 0])[:, 0],
+                    scaler.inverse_transform(model.pred_int_80[:, :, 1])[:, 0],
+                    scaler.inverse_transform(model.pred_int_95[:, :, 0])[:, 0],
+                    scaler.inverse_transform(model.pred_int_95[:, :, 1])[:, 0]):
+            f.write("{0},{1},{2},{3},{4}\n".format(forecast_value, pred_int_80_low, pred_int_80_high, pred_int_95_low,
+                                                   pred_int_95_up))
+    with open(cfg['results_path'] + file_name + "_forecast_horizon.csv", "w") as f:
+        f.write("forecast,pred_int_80_low,pred_int_80_high,pred_int_95_low,pred_int_95_high\n")
+        for (forecast_value, pred_int_80_low, pred_int_80_high, pred_int_95_low, pred_int_95_up) in \
+                zip(scaler.inverse_transform(forecast)[0, :],
+                    scaler.inverse_transform(model.pred_int_80[:, :, 0])[0, :],
+                    scaler.inverse_transform(model.pred_int_80[:, :, 1])[0, :],
+                    scaler.inverse_transform(model.pred_int_95[:, :, 0])[0, :],
+                    scaler.inverse_transform(model.pred_int_95[:, :, 1])[0, :]):
+            f.write("{0},{1},{2},{3},{4}\n".format(forecast_value, pred_int_80_low, pred_int_80_high, pred_int_95_low,
+                                                   pred_int_95_up))
 
     return forecast_mse, forecast_smape, forecast_mase, forecast_std, coverage_80, coverage_95, width_80, width_95, msis_80, msis_95
 

@@ -107,8 +107,8 @@ def time_series_avocado_pipeline(cfg):
         mse, smape, mase, std, c_80, c_95, w_80, w_95, msis_80, msis_95 = \
             test_model(model=trained_model, data=test, validation_mse=validation_mse, cfg=cfg,
                        naive_error=naive_error, scaler=scaler, plot=False, file_name=test_name,
-                       min_max=(np.max(scaler.inverse_transform(train)) - np.min(scaler.inverse_transform(train)))
-                               / (np.max(train) - np.min(train)), disable_pbar=True)
+                       min_max=(np.max(scaler.inverse_transform(train)) - np.min(scaler.inverse_transform(train))) /
+                               (np.max(train) - np.min(train)), disable_pbar=True)
         msis_80_list.append(msis_80), msis_95_list.append(msis_95)
         forecast_mse_list.append(mse), forecast_smape_list.append(smape), forecast_mase_list.append(mase)
         validation_mse_list.append(validation_mse)

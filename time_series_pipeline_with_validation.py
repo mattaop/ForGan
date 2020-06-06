@@ -171,7 +171,7 @@ def test_model(model, data, validation_mse, cfg, naive_error, scaler, plot=True,
         if min_max:
             forecast_std *= min_max
 
-    with open(file_path, "a") as f:
+    with open(file_path, "w") as f:
         f.write("mse,smape,mase,std,coverage_80,coverage_95,width_80,width_95,msis_80,msis_95\n")
         for (mse, smape, mase, std, c_80, c_95, w_80, w_95, m_80, m_95) in zip(forecast_mse, forecast_smape,
                                                                                forecast_mase, forecast_std, coverage_80,
@@ -179,7 +179,30 @@ def test_model(model, data, validation_mse, cfg, naive_error, scaler, plot=True,
                                                                                msis_95):
             f.write("{0},{1},{2},{3},{4},{5},{6},{7},{8},{9}\n".format(mse, smape, mase, std, c_80, c_95, w_80, w_95,
                                                                        m_80, m_95))
-
+    try:
+        file_name = file_name.replace('validation_results.txt', '')
+    except:
+        file_name = file_name.replace('test_results.txt', '')
+    with open(cfg['results_path'] + file_name + "_forecast_one_step.csv", "w") as f:
+        f.write("forecast,pred_int_80_low,pred_int_80_high,pred_int_95_low,pred_int_95_high\n")
+        for (forecast_value, pred_int_80_low, pred_int_80_high, pred_int_95_low, pred_int_95_up) in \
+                zip(scaler.inverse_transform(forecast_mean)[:, 0],
+                    scaler.inverse_transform(np.quantile(forecast, q=0.1, axis=-1))[:, 0],
+                    scaler.inverse_transform(np.quantile(forecast, q=0.9, axis=-1))[:, 0],
+                    scaler.inverse_transform(np.quantile(forecast, q=0.025, axis=-1))[:, 0],
+                    scaler.inverse_transform(np.quantile(forecast, q=0.975, axis=-1))[:, 0]):
+            f.write("{0},{1},{2},{3},{4}\n".format(forecast_value, pred_int_80_low, pred_int_80_high, pred_int_95_low,
+                                                   pred_int_95_up))
+    with open(cfg['results_path'] + file_name + "_forecast_horizon.csv", "w") as f:
+        f.write("forecast,pred_int_80_low,pred_int_80_high,pred_int_95_low,pred_int_95_high\n")
+        for (forecast_value, pred_int_80_low, pred_int_80_high, pred_int_95_low, pred_int_95_up) in \
+                zip(scaler.inverse_transform(forecast_mean)[0, :],
+                    scaler.inverse_transform(np.quantile(forecast, q=0.1, axis=-1))[0, :],
+                    scaler.inverse_transform(np.quantile(forecast, q=0.9, axis=-1))[0, :],
+                    scaler.inverse_transform(np.quantile(forecast, q=0.025, axis=-1))[0, :],
+                    scaler.inverse_transform(np.quantile(forecast, q=0.975, axis=-1))[0, :]):
+            f.write("{0},{1},{2},{3},{4}\n".format(forecast_value, pred_int_80_low, pred_int_80_high, pred_int_95_low,
+                                                   pred_int_95_up))
     return forecast_mse, forecast_smape, forecast_mase, forecast_std, coverage_80, coverage_95, width_80, width_95, msis_80, msis_95
 
 

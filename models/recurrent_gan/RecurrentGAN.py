@@ -38,10 +38,7 @@ class RecurrentGAN(GAN):
         self.mc_forward_passes = cfg['mc_forward_passes']
 
         self.layers = cfg['layers']
-        if cfg['number_of_recurrent_layers']:
-            self.num_layers = cfg['number_of_recurrent_layers']
-        else:
-            self.num_layers = 1
+        self.num_layers = 1
         self.optimizer = Adam(cfg['learning_rate'], 0.5)
         self.loss_function = 'binary_crossentropy'
 

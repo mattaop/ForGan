@@ -29,11 +29,11 @@ class ARIMA:
         pass
 
     def fit(self, x, y, epochs=1, batch_size=32, verbose=1):
-        # fit Exponential Smoothing
+        # fit ARIMA
         train = np.concatenate([x[0, :, 0], y[:, 0, 0]])
         auto_model = auto_arima(train, start_p=1, start_q=1, max_p=5, max_q=5, max_d=3, max_P=2, max_Q=2, max_D=2,
-                                m=self.seasonality, start_P=1, start_Q=1, seasonal=False, d=None, D=None,
-                                suppress_warnings=True, stepwise=False, information_criterion='aicc',
+                                m=self.seasonality, start_P=1, start_Q=1, seasonal=True, d=None, D=None,
+                                suppress_warnings=True, stepwise=True, information_criterion='aicc',
                                 error_action="ignore")
 
         print(auto_model.summary())

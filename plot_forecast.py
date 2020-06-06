@@ -6,6 +6,7 @@ os.environ['TF_CUDNN_USE_AUTOTUNE'] = '0'
 os.environ['TF_DETERMINISTIC_OPS'] = '1'
 
 import numpy as np
+import pandas as pd
 import random as rn
 import tensorflow as tf
 print(tf.__version__)
@@ -36,90 +37,76 @@ from data.load_data import load_oslo_temperature, load_australia_temperature
 from utility.compute_statistics import *
 from time_series_pipeline import configure_model, load_data, plot_results
 from time_series_pipeline_with_validation import test_model, compute_validation_error
+from time_series_pipeline_baseline import train_model
 
 
-def train_model(model, data, cfg):
-    # Split data in training and validation set
-    train, val = data[:-int(len(data)*cfg['val_split'])], data[-int(model.window_size+len(data)*cfg['val_split']):]
-
-    # Split training data into (x_t-l, ..., x_t), (x_t+1) pairs
-    x_train, y_train = split_sequence(train, model.window_size, model.output_size)
-    x_val, y_val = split_sequence(val, model.window_size, model.output_size)
-
-    validation_mse = compute_validation_error(model, x_val, y_val)
-
-    return model, validation_mse, val
+def read_files(file_path, file_name):
+    df = pd.read_csv(file_path.lower() + file_name, header=0)
+    return df
 
 
-def pipeline(model_path, model_name):
-    cfg = load_config_file(model_path+'config.yml')
-    model = configure_model(cfg=cfg)
-    model.generator = load_model(model_path+model_name)
-    train_df, test_df, scalers = load_data(cfg=cfg, window_size=model.window_size)
-    print(train_df.columns)
-    if cfg['data_source'] == 'avocado':
-        for i in range(len(train_df.columns.values)):
-            column = train_df.columns.values[i]
-            train = train_df[column].values.reshape(-1, 1)
-            test = test_df[column].values.reshape(-1, 1)
-            scaler = scalers[i]
-            trained_model, validation_mse, val = train_model(model=model, data=train, cfg=cfg)
-            # trained_model.forecasting_horizon = len(test)-trained_model.window_size
-            forecast = trained_model.recurrent_forecast(np.expand_dims(test[:model.window_size], 0))
-            print(forecast.shape)
-            forecast_mean = np.mean(forecast, axis=-1)
-            forecast_var = np.std(forecast, axis=-1)
-            x_pred = np.linspace(model.window_size + 1, len(forecast_mean) + model.window_size, len(forecast_mean))
-
-            plt.figure()
-            plt.plot(np.linspace(1, trained_model.window_size + trained_model.forecasting_horizon,
-                                 trained_model.window_size + trained_model.forecasting_horizon),
-                     scaler.inverse_transform(test[:trained_model.window_size + trained_model.forecasting_horizon]),
-                     label='Data')
-            plt.plot(x_pred,
-                     scaler.inverse_transform(forecast_mean.reshape(-1, 1)), label='ForGAN')
-            plt.fill_between(x_pred,
-                             scaler.inverse_transform(np.quantile(forecast, q=0.1, axis=-1).reshape(-1, 1))[:, 0],
-                             scaler.inverse_transform(np.quantile(forecast, q=0.9, axis=-1).reshape(-1, 1))[:, 0],
-                             alpha=0.5, edgecolor='#CC4F1B', facecolor='#FF9848', label='80%-PI')
-            plt.fill_between(x_pred,
-                             scaler.inverse_transform(np.quantile(forecast, q=0.025, axis=-1).reshape(-1, 1))[:, 0],
-                             scaler.inverse_transform(np.quantile(forecast, q=0.975, axis=-1).reshape(-1, 1))[:, 0],
-                             alpha=0.2, edgecolor='#CC4F1B', facecolor='#FF9848', label='95%-PI')
-            plt.title('ForGAN Time Series Forecasting')
-            plt.legend()
-            plt.savefig('plots/sine/forecasting_forgan.png')
-            plt.show()
-
-    else:
-        trained_model, validation_mse, val = train_model(model=model, data=train, cfg=cfg)
-        # trained_model.forecasting_horizon = len(test)-trained_model.window_size
-        forecast = trained_model.recurrent_forecast(np.expand_dims(test[:model.window_size], 0))
-        print(forecast.shape)
-        forecast_mean = np.mean(forecast, axis=-1)
-        forecast_var = np.std(forecast, axis=-1)
-        x_pred = np.linspace(model.window_size + 1, len(forecast_mean)+model.window_size, len(forecast_mean))
+def plot_figures(data, test, window_size):
+    x_pred = np.linspace(window_size + 1, len(test), len(data[0]['forecast']))
+    plt.figure()
+    plt.plot(np.linspace(1, len(test), len(test)), test)
+    plt.plot(x_pred, data[0]['forecast'], label='ARIMA')
+    plt.plot(x_pred, data[1]['forecast'], label='ETS')
+    plt.plot(x_pred, data[2]['forecast'], label='MC dropout')
+    plt.plot(x_pred, data[3]['forecast'], label='ForGAN')
+    plt.title('ForGAN Time Series Forecasting')
+    plt.legend()
+    plt.savefig('plots/oslo/forecasting_horizon.png')
+    plt.show()
+    for i in range(len(data)):
         plt.figure()
-        plt.plot(np.linspace(1, trained_model.window_size+trained_model.forecasting_horizon,
-                             trained_model.window_size+trained_model.forecasting_horizon),
-                 scaler.inverse_transform(test[:trained_model.window_size+trained_model.forecasting_horizon]), label='Data')
-        plt.plot(x_pred,
-                 scaler.inverse_transform(forecast_mean.reshape(-1, 1)), label='ForGAN')
-        plt.fill_between(x_pred,
-                         scaler.inverse_transform(np.quantile(forecast, q=0.1, axis=-1).reshape(-1, 1))[:, 0],
-                         scaler.inverse_transform(np.quantile(forecast, q=0.9, axis=-1).reshape(-1, 1))[:, 0],
+        plt.plot(np.linspace(1, len(test), len(test)), test),
+        plt.plot(x_pred, data[i]['forecast'], label='Predictions')
+        plt.fill_between(x_pred, data[i]['pred_int_80_low'],data[i]['pred_int_80_high'],
                          alpha=0.5, edgecolor='#CC4F1B', facecolor='#FF9848', label='80%-PI')
         plt.fill_between(x_pred,
-                         scaler.inverse_transform(np.quantile(forecast, q=0.025, axis=-1).reshape(-1, 1))[:, 0],
-                         scaler.inverse_transform(np.quantile(forecast, q=0.975, axis=-1).reshape(-1, 1))[:, 0],
+                         data[i]['pred_int_95_low'],
+                         data[i]['pred_int_95_high'],
                          alpha=0.2, edgecolor='#CC4F1B', facecolor='#FF9848', label='95%-PI')
-        plt.title('ForGAN Time Series Forecasting')
-        plt.legend()
-        plt.savefig('plots/sine/forecasting_forgan.png')
+        plt.title(model_names[i] + ' Time Series Forecasting')
+        plt.legend(loc=2)
+        plt.savefig('plots/oslo/' + model_names[i] + '_forecasting_horizon.png')
         plt.show()
 
 
+def pipeline(model_paths):
+    cfg = load_config_file(model_paths[3]+'config.yml')
+    train, test, scaler = load_data(cfg=cfg, window_size=cfg['window_size'])
+
+    arima_data = read_files(model_paths[0], 'test_results.txt_forecast_horizon.csv')
+    es_data = read_files(model_paths[1], 'test_results.txt_forecast_horizon.csv')
+    mc_data = read_files(model_paths[2], 'test_results.txt_forecast_horizon.csv')
+    gan_data = read_files(model_paths[3], 'test_results_generator_5000.h5.txt_forecast_horizon.csv')
+    data = [arima_data, es_data, mc_data, gan_data]
+    plot_figures(data, scaler.inverse_trainsforme(test[:cfg['window_size'] + len(data[0]['forecast'])]),
+                 cfg['window_size'])
+
+
+def avocado_pipeline(model_paths):
+    cfg = load_config_file(model_paths[3]+'config.yml')
+    train_df, test_df, scalers = load_data(cfg=cfg, window_size=cfg['window_size'])
+
+    for i in range(len(train_df.columns.values)):
+        column = train_df.columns.values[i]
+        test = test_df[column].values.reshape(-1, 1)
+        scaler = scalers[i]
+        arima_data = read_files(model_paths[0], 'test_results.txt_forecast_horizon.csv')
+        es_data = read_files(model_paths[1], 'test_results.txt_forecast_horizon.csv')
+        mc_data = read_files(model_paths[2], 'test_results.txt_forecast_horizon.csv')
+        gan_data = read_files(model_paths[3], 'test_results_generator_5000.h5.txt_forecast_horizon.csv')
+        data = [arima_data, es_data, mc_data, gan_data]
+        plot_figures(data, scaler.inverse_trainsforme(test[:cfg['window_size']+len(data[0]['forecast'])]),
+                     cfg['window_size'])
+
+
 if __name__ == '__main__':
-    model_path = 'results/avocado/recurrentgan/minmax/rnn_epochs_30000_D_epochs_3_batch_size_32_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.000100/'
-    model_name = 'generator_30000.h5'
-    pipeline(model_path, model_name)
+    model_path = ['results/oslo/arima/',
+                  'results/oslo/es/',
+                  'results/oslo/rnn/minmax/rnn_epochs_500_D_epochs_5_batch_size_64_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.001000/',
+                  'results/oslo/recurrentgan/minmax/rnn_epochs_5000_D_epochs_10_batch_size_64_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.001000/']
+    model_names = ['ARIMA', 'ETS', 'MC Dropout', 'ForGAN']
+    pipeline(model_path)

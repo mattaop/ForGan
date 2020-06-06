@@ -19,6 +19,7 @@ class RNN:
     def __init__(self, cfg):
         self.plot_rate = cfg['plot_rate']
         self.plot_folder = 'RNN'
+        self.results_path = cfg['results_path']
         self.layers = cfg['layers']
         self.window_size = cfg['window_size']
         self.forecasting_horizon = cfg['forecast_horizon']
@@ -75,6 +76,7 @@ class RNN:
         # Load the data
         history = self.model.fit(x, y[:, :, 0], validation_data=[x_val, y_val[:, :, 0]], epochs=epochs,
                                  batch_size=batch_size, verbose=2, shuffle=True)
+        self.model.save(self.results_path + "/model.h5")
         return history
 
     def forecast(self, x):
@@ -99,8 +101,7 @@ class RNN:
                 x_input = np.vstack([time_series[:, i:self.window_size + i]]*self.mc_forward_passes)
                 forecast[i] = np.array(func([x_input, 0.4])[0]).transpose()
         if plot:
-            print(data.shape)
-            print(forecast.shape)
+
             plt.figure()
             plt.plot(np.linspace(1, self.window_size + self.forecasting_horizon,
                                  self.window_size + self.forecasting_horizon),

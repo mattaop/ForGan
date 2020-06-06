@@ -115,7 +115,31 @@ def pipeline(model_path, model_name):
     print('95%-prediction interval MSIS:', np.mean(np.mean(msis_95_list, axis=0)))
 
 
+def avocado_pipeline(model_path, model_name):
+    cfg = load_config_file(model_path+'config.yml')
+    df_train, df_test, scalers = load_data(cfg=cfg, window_size=cfg['window_size'])
+    model = configure_model(cfg=cfg)
+    model.generator = load_model(model_path + model_name)
+    i = 0
+    for columnName, columnData in tqdm(df_train.iteritems(), total=df_train.columns.shape[0]):
+        train = df_train[columnName].values.reshape(-1, 1)
+        test = df_test[columnName].values.reshape(-1, 1)
+        scaler = scalers[i]
+        naive_error = compute_naive_error(scaler.inverse_transform(train), seasonality=cfg['seasonality'],
+                                          forecast_horizon=model.forecasting_horizon)
+        trained_model, validation_mse, val = train_model(model=model, data=train, cfg=cfg)
+        if cfg['data_source'] == 'avocado':
+            test_name = "/" + columnName[1] + "_" + columnName[2] + "_test_results.txt"
+        else:
+            test_name = "/" + columnName + "_test_results.txt"
+        test_model(model=trained_model, data=test, validation_mse=validation_mse, cfg=cfg,
+                   naive_error=naive_error, scaler=scaler, plot=False, file_name=test_name,
+                   min_max=(np.max(scaler.inverse_transform(train)) - np.min(scaler.inverse_transform(train))) /
+                           (np.max(train) - np.min(train)), disable_pbar=True)
+        i += 1
+
+
 if __name__ == '__main__':
-    model_path = 'results/sine/recurrentgan/minmax/rnn_epochs_1500_D_epochs_3_batch_size_32_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.001000/'
-    model_name = 'generator_1500.h5'
-    pipeline(model_path, model_name)
+    model_path = 'results/avocado/recurrentgan/minmax/rnn_epochs_30000_D_epochs_5_batch_size_64_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.000100/'
+    model_name = 'generator_30000.h5'
+    avocado_pipeline(model_path, model_name)
