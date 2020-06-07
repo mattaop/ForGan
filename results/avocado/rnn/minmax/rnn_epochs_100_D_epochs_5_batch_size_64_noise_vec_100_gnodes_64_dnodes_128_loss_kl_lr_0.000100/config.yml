@@ -1,0 +1,31 @@
+batch_norm: true
+batch_size: 64
+cross_validation_setup:
+  k-folds: 5
+data_source: avocado
+discriminator_epochs: 5
+discriminator_nodes: 128
+dropout: false
+epochs: 100
+forecast_horizon: 13
+generator_nodes: 64
+layers: rnn
+learning_rate: 0.0001
+loss_function: kl
+mc_forward_passes: 1000
+mixed_batches: false
+model_name: rnn
+new_training_loop: true
+noise_type: gaussian
+noise_vector_size: 100
+number_of_recurrent_layers: 1
+plot_rate: 1000
+print_coverage: true
+recurrent_forecasting: true
+results_path: results/avocado/rnn/minmax/rnn_epochs_100_D_epochs_5_batch_size_64_noise_vec_100_gnodes_64_dnodes_128_loss_kl_lr_0.000100
+save_model_interval: 100
+scaler: MinMax
+seasonality: 1
+test_split: 0.2
+val_split: 0.1
+window_size: 52
