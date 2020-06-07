@@ -107,7 +107,7 @@ class RecurrentGAN(GAN):
         prediction = Dense(self.output_size)(x)
 
         model = Model(inputs=[historic_inp, noise_inp], outputs=prediction)
-        model.summary()
+        # model.summary()
         return model
 
     def build_discriminator(self):
@@ -146,7 +146,7 @@ class RecurrentGAN(GAN):
         validity = Dense(1, activation='sigmoid')(x)
 
         model = Model(inputs=[historic_inp, future_inp], outputs=validity)
-        model.summary()
+        # model.summary()
 
         return model
 
@@ -349,7 +349,7 @@ class RecurrentGAN(GAN):
                     best_epoch = epoch+1
 
         best_generator.save(self.results_path + "/generator_best_%d.h5" % best_epoch)
-        # self.generator = best_generator
+        self.generator.save(self.results_path + "/generator_finished.h5")
         print('Best model at epoch %d, validation mse: %f' % (best_epoch, best_validation_mse))
 
         if self.print_coverage:
@@ -362,17 +362,10 @@ class RecurrentGAN(GAN):
 
     def forecast(self, x):
         forecast = np.zeros([x.shape[0], self.mc_forward_passes, self.output_size])
-        for i in trange(x.shape[0]):
+        for i in trange(x.shape[0], disable=True):
             generator_noise = self._generate_noise(batch_size=self.mc_forward_passes)
             x_input = np.vstack([np.expand_dims(x[i], axis=0)] * self.mc_forward_passes)
             forecast[i] = self.generator.predict([x_input, generator_noise])
-        """
-        forecast = np.zeros([x.shape[0]*self.mc_forward_passes, self.forecasting_horizon])
-        generator_noise = self._generate_noise(batch_size=self.mc_forward_passes*x.shape[0])
-        x_input = np.vstack([np.expand_dims(x, axis=0)] * self.mc_forward_passes)
-        forecast = self.generator.predict([x_input.reshape([x_input.shape[0]*x_input.shape[1], x_input.shape[2], x_input.shape[3]]), generator_noise])
-        forecast = forecast.reshape([x.shape[0], self.mc_forward_passes, self.output_size])
-        """
         return forecast.mean(axis=1)
 
     def recurrent_forecast(self, time_series):
@@ -394,28 +387,6 @@ class RecurrentGAN(GAN):
                 generator_noise = self._generate_noise(batch_size=self.mc_forward_passes)
                 x_input = np.vstack([time_series[:, i:self.window_size + i]]*self.mc_forward_passes)
                 forecast[i] = self.generator.predict([x_input, generator_noise]).transpose()
-        if plot:
-            plt.figure()
-            plt.plot(np.linspace(1, self.window_size + self.forecasting_horizon,
-                                 self.window_size + self.forecasting_horizon),
-                     data[:self.window_size + self.forecasting_horizon, 0], label='Real data')
-            plt.plot(np.linspace(self.window_size+1, self.window_size + self.forecasting_horizon,
-                                 self.forecasting_horizon),
-                     forecast.mean(axis=2)[0, :],
-                     label='Forecast data')
-            plt.fill_between(np.linspace(self.window_size+1, self.window_size + self.forecasting_horizon,
-                                         self.forecasting_horizon),
-                             forecast.mean(axis=-1)[0, :] - 1.28 * forecast.std(axis=-1)[0, :],
-                             forecast.mean(axis=-1)[0, :] + 1.28 * forecast.std(axis=-1)[0, :],
-                             alpha=0.5, edgecolor='#CC4F1B', facecolor='#FF9848', label='80%-PI')
-            plt.fill_between(np.linspace(self.window_size+1, self.window_size + self.forecasting_horizon,
-                                         self.forecasting_horizon),
-                             forecast.mean(axis=-1)[0, :] - 1.96 * forecast.std(axis=-1)[0, :],
-                             forecast.mean(axis=-1)[0, :] + 1.96 * forecast.std(axis=-1)[0, :],
-                             alpha=0.2, edgecolor='#CC4F1B', facecolor='#FF9848', label='95%-PI')
-
-            plt.legend()
-            plt.show()
         return forecast
 
 

@@ -8,7 +8,6 @@ def load_config_file(file_name, print_config=False):
         print(cfg)
     if cfg['model_name'].lower() in ['es', 'arima']:
         cfg['results_path'] = "results/" + cfg['data_source'].lower() + "/" + cfg['model_name'].lower()
-
     else:
         cfg['results_path'] = "results/" + cfg['data_source'].lower() + "/" + cfg['model_name'].lower() + "/" \
                             + cfg['scaler'].lower() + "/" + cfg['layers'].lower() + \

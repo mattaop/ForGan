@@ -122,33 +122,6 @@ def test_model(model, data, validation_mse, cfg, naive_error, scaler, plot=True,
                          - scaler.inverse_transform(np.quantile(forecast, q=0.025, axis=-1)), axis=0)
     width_80_2 = 2*1.28 * np.mean(total_uncertainty, axis=0)
     width_95_2 = 2*1.96 * np.mean(total_uncertainty, axis=0)
-    if plot:
-        print('Width 80:', np.mean(width_80_1), ', width 95:', np.mean(width_95_1))
-
-        print('80%-prediction interval coverage - Mean:', coverage_80_1.mean(),
-              '\n Forecast horizon:', coverage_80_1)
-        print('95%-prediction interval coverage - Mean:', coverage_95_1.mean(),
-              '\n Forecast horizon:', coverage_95_1)
-
-        print('Width 80:', np.mean(width_80_2), ', width 95:', np.mean(width_95_2))
-        print('80%-prediction interval coverage - Mean:', coverage_80_2.mean(),
-              '\n Forecast horizon:', coverage_80_2)
-        print('95%-prediction interval coverage - Mean:', coverage_95_2.mean(),
-              '\n Forecast horizon:', coverage_95_2)
-
-        plot_results(sliding_window_mse(forecast_mean, data[model.window_size:], model.forecasting_horizon),
-                     label='Forecast MSE', title='Mean Squared Forecast Error', y_label='MSE')
-        plot_results(sliding_window_coverage(actual_values=data[model.window_size:],
-                                             upper_limits=np.quantile(forecast, q=0.9, axis=-1),
-                                             lower_limits=np.quantile(forecast, q=0.1, axis=-1),
-                                             forecast_horizon=model.forecasting_horizon),
-                     label='80% PI coverage',
-                     y2=sliding_window_coverage(actual_values=data[model.window_size:],
-                                                upper_limits=np.quantile(forecast, q=0.975, axis=-1),
-                                                lower_limits=np.quantile(forecast, q=0.025, axis=-1),
-                                                forecast_horizon=model.forecasting_horizon),
-                     y2_label='95% PI coverage',
-                     title='Prediction Interval Coverage', y_label='Coverage')
 
     file_path = cfg['results_path'] + file_name
 
@@ -183,26 +156,50 @@ def test_model(model, data, validation_mse, cfg, naive_error, scaler, plot=True,
         file_name = file_name.replace('validation_results.txt', '')
     except:
         file_name = file_name.replace('test_results.txt', '')
-    with open(cfg['results_path'] + file_name + "_forecast_one_step.csv", "w") as f:
-        f.write("forecast,pred_int_80_low,pred_int_80_high,pred_int_95_low,pred_int_95_high\n")
-        for (forecast_value, pred_int_80_low, pred_int_80_high, pred_int_95_low, pred_int_95_up) in \
-                zip(scaler.inverse_transform(forecast_mean)[:, 0],
-                    scaler.inverse_transform(np.quantile(forecast, q=0.1, axis=-1))[:, 0],
-                    scaler.inverse_transform(np.quantile(forecast, q=0.9, axis=-1))[:, 0],
-                    scaler.inverse_transform(np.quantile(forecast, q=0.025, axis=-1))[:, 0],
-                    scaler.inverse_transform(np.quantile(forecast, q=0.975, axis=-1))[:, 0]):
-            f.write("{0},{1},{2},{3},{4}\n".format(forecast_value, pred_int_80_low, pred_int_80_high, pred_int_95_low,
+    if cfg['model_name'].lower() == 'rnn':
+        with open(cfg['results_path'] + file_name + "_forecast_one_step.csv", "w") as f:
+            f.write("forecast,pred_int_80_low,pred_int_80_high,pred_int_95_low,pred_int_95_high\n")
+            for (forecast_value, pred_int_80_low, pred_int_80_high, pred_int_95_low, pred_int_95_up) in \
+                    zip(scaler.inverse_transform(forecast_mean)[:, 0],
+                        scaler.inverse_transform(forecast_mean - 1.28*total_uncertainty)[:, 0],
+                        scaler.inverse_transform(forecast_mean + 1.28*total_uncertainty)[:, 0],
+                        scaler.inverse_transform(forecast_mean - 1.96*total_uncertainty)[:, 0],
+                        scaler.inverse_transform(forecast_mean + 1.96*total_uncertainty)[:, 0]):
+                f.write(
+                    "{0},{1},{2},{3},{4}\n".format(forecast_value, pred_int_80_low, pred_int_80_high, pred_int_95_low,
                                                    pred_int_95_up))
-    with open(cfg['results_path'] + file_name + "_forecast_horizon.csv", "w") as f:
-        f.write("forecast,pred_int_80_low,pred_int_80_high,pred_int_95_low,pred_int_95_high\n")
-        for (forecast_value, pred_int_80_low, pred_int_80_high, pred_int_95_low, pred_int_95_up) in \
-                zip(scaler.inverse_transform(forecast_mean)[0, :],
-                    scaler.inverse_transform(np.quantile(forecast, q=0.1, axis=-1))[0, :],
-                    scaler.inverse_transform(np.quantile(forecast, q=0.9, axis=-1))[0, :],
-                    scaler.inverse_transform(np.quantile(forecast, q=0.025, axis=-1))[0, :],
-                    scaler.inverse_transform(np.quantile(forecast, q=0.975, axis=-1))[0, :]):
-            f.write("{0},{1},{2},{3},{4}\n".format(forecast_value, pred_int_80_low, pred_int_80_high, pred_int_95_low,
+        with open(cfg['results_path'] + file_name + "_forecast_horizon.csv", "w") as f:
+            f.write("forecast,pred_int_80_low,pred_int_80_high,pred_int_95_low,pred_int_95_high\n")
+            for (forecast_value, pred_int_80_low, pred_int_80_high, pred_int_95_low, pred_int_95_up) in \
+                    zip(scaler.inverse_transform(forecast_mean)[0, :],
+                        scaler.inverse_transform(forecast_mean - 1.28*total_uncertainty)[0, :],
+                        scaler.inverse_transform(forecast_mean + 1.28*total_uncertainty)[0, :],
+                        scaler.inverse_transform(forecast_mean - 1.96*total_uncertainty)[0, :],
+                        scaler.inverse_transform(forecast_mean + 1.96*total_uncertainty)[0, :]):
+                f.write(
+                    "{0},{1},{2},{3},{4}\n".format(forecast_value, pred_int_80_low, pred_int_80_high, pred_int_95_low,
                                                    pred_int_95_up))
+    else:
+        with open(cfg['results_path'] + file_name + "_forecast_one_step.csv", "w") as f:
+            f.write("forecast,pred_int_80_low,pred_int_80_high,pred_int_95_low,pred_int_95_high\n")
+            for (forecast_value, pred_int_80_low, pred_int_80_high, pred_int_95_low, pred_int_95_up) in \
+                    zip(scaler.inverse_transform(forecast_mean)[:, 0],
+                        scaler.inverse_transform(np.quantile(forecast, q=0.1, axis=-1))[:, 0],
+                        scaler.inverse_transform(np.quantile(forecast, q=0.9, axis=-1))[:, 0],
+                        scaler.inverse_transform(np.quantile(forecast, q=0.025, axis=-1))[:, 0],
+                        scaler.inverse_transform(np.quantile(forecast, q=0.975, axis=-1))[:, 0]):
+                f.write("{0},{1},{2},{3},{4}\n".format(forecast_value, pred_int_80_low, pred_int_80_high, pred_int_95_low,
+                                                       pred_int_95_up))
+        with open(cfg['results_path'] + file_name + "_forecast_horizon.csv", "w") as f:
+            f.write("forecast,pred_int_80_low,pred_int_80_high,pred_int_95_low,pred_int_95_high\n")
+            for (forecast_value, pred_int_80_low, pred_int_80_high, pred_int_95_low, pred_int_95_up) in \
+                    zip(scaler.inverse_transform(forecast_mean)[0, :],
+                        scaler.inverse_transform(np.quantile(forecast, q=0.1, axis=-1))[0, :],
+                        scaler.inverse_transform(np.quantile(forecast, q=0.9, axis=-1))[0, :],
+                        scaler.inverse_transform(np.quantile(forecast, q=0.025, axis=-1))[0, :],
+                        scaler.inverse_transform(np.quantile(forecast, q=0.975, axis=-1))[0, :]):
+                f.write("{0},{1},{2},{3},{4}\n".format(forecast_value, pred_int_80_low, pred_int_80_high, pred_int_95_low,
+                                                       pred_int_95_up))
     return forecast_mse, forecast_smape, forecast_mase, forecast_std, coverage_80, coverage_95, width_80, width_95, msis_80, msis_95
 
 

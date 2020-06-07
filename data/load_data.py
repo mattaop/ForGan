@@ -6,6 +6,7 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.linear_model import LinearRegression
 from skimage.measure import block_reduce
 
+
 def load_raw_data(file_name=''):
     path = get_path()
     return pd.read_csv(path['project path'] + 'data//' + file_name, header=0, index_col=0)
@@ -51,10 +52,16 @@ def load_electricity(project_path=None):
     idx = pd.DatetimeIndex(freq="h", start="2018-01-01", periods=data_array.shape[1])
     # df = pd.DataFrame(data_array)
     df = pd.DataFrame(data=data_array.transpose(), index=idx, columns=map(str, np.arange(0, 370)))
-    df = df.loc['2018-01-01 00:00:0':'2019-01-01 00:00:0', '0':'49']
-    df.drop(['0', '2', '6', '11', '14', '23', '29', '31', '32', '38', '40'], axis=1, inplace=True)
+    df = df.loc['2018-01-01 00:00:00':'2019-01-01 00:00:00', '0':'51']
+    df.drop(['0', '1', '2', '6', '11', '14', '23', '29', '31', '32', '38', '40'], axis=1, inplace=True)
     print(df.shape)
-    return df
+    scaled_data = pd.DataFrame(columns=df.columns.values, index=df.index)
+    scaler = MinMaxScaler((0, 100))
+    for columnName, columnData in df.iteritems():
+        columnData.loc['2018-03-26 01:00:00'] = np.mean([columnData.loc['2018-03-26 00:00:00'],
+                                                         columnData.loc['2018-03-26 02:00:00']])
+        scaled_data[columnName] = scaler.fit_transform(columnData.values.reshape(-1, 1))[:, 0]
+    return scaled_data
 
 
 def load_traffic():
@@ -79,6 +86,7 @@ def load_avocado(project_path=None):
     df = df.fillna(method='backfill').dropna()
     df.sort_index(inplace=True)
     # df = df.drop(columns=[('AveragePrice', 'TotalUS', 'organic')])
+    # df = df.loc[:, ('AveragePrice', 'Albany', 'conventional'):('AveragePrice', 'Albany', 'organic')]
     return df
 
 

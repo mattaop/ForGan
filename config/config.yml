@@ -1,10 +1,10 @@
-model_name: RecurrentGAN # RNN, ES, ARIMA, GAN, ConvGAN, RecurrentGAN, RecurrentConvGAN, RecurrentConvDSGAN, RecurrentConditionalGAN
+model_name: rnn # RNN, ES, ARIMA, GAN, ConvGAN, RecurrentGAN, RecurrentConvGAN, RecurrentConvDSGAN, RecurrentConditionalGAN
 loss_function: kl # kl, w, ds
 
-epochs: 3000
-batch_size: 32
-learning_rate: 0.0001
-discriminator_epochs: 5
+epochs: 100
+batch_size: 64
+learning_rate: 0.001
+discriminator_epochs: 3
 
 layers: rnn  # rnn, lstm, gru
 number_of_recurrent_layers: 1
@@ -15,14 +15,14 @@ dropout: False # True, False
 noise_vector_size: 100
 noise_type: gaussian # gaussian (default), uniform
 
-window_size: 52
+window_size: 26
 forecast_horizon: 13
 recurrent_forecasting: True # True, False
 mc_forward_passes: 1000
 plot_rate: 1000
 
 print_coverage: True # True, False, Will slow down training, but print coverage during training
-save_model_interval: 100
+save_model_interval: 1000
 
 data_source: avocado # sine, oslo, australia, avocado, electricity
 val_split: 0.1

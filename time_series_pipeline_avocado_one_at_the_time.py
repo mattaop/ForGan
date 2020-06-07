@@ -45,8 +45,8 @@ def time_series_avocado_pipeline(cfg):
         naive_error = compute_naive_error(scaler.inverse_transform(train), seasonality=cfg['seasonality'],
                                           forecast_horizon=model.forecasting_horizon)
         start_time = time.time()
-        validation_name = "/specific_model/" + columnName[1] + "_" + columnName[2] + "_validation_results.txt"
-        test_name = "/specific_model/" + columnName[1] + "_" + columnName[2] + "_test_results.txt"
+        validation_name = "/" + columnName[1] + "_" + columnName[2] + "_validation_results.txt"
+        test_name = "/" + columnName[1] + "_" + columnName[2] + "_test_results.txt"
         trained_model, validation_mse, val = train_model(model, train, epochs=cfg['epochs'], cfg=cfg,
                                                          batch_size=cfg['batch_size'], verbose=0)
         training_time = time.time() - start_time
@@ -95,7 +95,7 @@ def time_series_avocado_pipeline(cfg):
           )
     print('95%-prediction interval MSIS:', np.mean(np.mean(msis_95_list, axis=0)))
 
-    file_path = cfg['results_path']+"/specific_model/test_results_mean.txt"
+    file_path = cfg['results_path']+"/test_results_mean.txt"
 
     with open(file_path, "a") as f:
         f.write("mse,smape,mase,std,coverage_80,coverage_95,width_80,width_95,msis_80,msis_95\n")

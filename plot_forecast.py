@@ -110,7 +110,7 @@ def avocado_pipeline(model_paths):
 if __name__ == '__main__':
     model_path = ['results/avocado/arima/',
                   'results/avocado/es/',
-                  'results/avocado/rnn/minmax/rnn_epochs_40_D_epochs_5_batch_size_32_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.000500/',
+                  'results/avocado/rnn/minmax/rnn_epochs_40_D_epochs_5_batch_size_32_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.001000/',
                   'results/avocado/recurrentgan/minmax/rnn_epochs_30000_D_epochs_3_batch_size_32_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.000100/']
     model_names = ['ARIMA', 'ETS', 'MC Dropout', 'ForGAN']
     avocado_pipeline(model_path)
