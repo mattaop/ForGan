@@ -45,7 +45,7 @@ def read_files(file_path, file_name):
     return df
 
 
-def plot_figures(data, test, window_size):
+def plot_figures(data, test, window_size, columnName, data_set='oslo'):
     x_pred = np.linspace(window_size + 1, len(test), len(data[0]['forecast']))
     plt.figure()
     plt.plot(np.linspace(1, len(test), len(test)), test)
@@ -53,24 +53,28 @@ def plot_figures(data, test, window_size):
     plt.plot(x_pred, data[1]['forecast'], label='ETS')
     plt.plot(x_pred, data[2]['forecast'], label='MC dropout')
     plt.plot(x_pred, data[3]['forecast'], label='ForGAN')
-    plt.title('ForGAN Time Series Forecasting')
+    plt.title(columnName[1] + ' ' + columnName[2] + ' Time Series Forecasting')
     plt.legend()
-    plt.savefig('plots/oslo/forecasting_horizon.png')
-    plt.show()
+    plt.savefig('plots/' + data_set + '/' + columnName[1] + '_' + columnName[2] + '_forecasting_horizon.png')
+    #plt.show()
+    plt.close()
+
     for i in range(len(data)):
         plt.figure()
         plt.plot(np.linspace(1, len(test), len(test)), test),
-        plt.plot(x_pred, data[i]['forecast'], label='Predictions')
-        plt.fill_between(x_pred, data[i]['pred_int_80_low'],data[i]['pred_int_80_high'],
+        plt.plot(x_pred, data[i]['forecast'], label=model_names[i])
+        plt.fill_between(x_pred, data[i]['pred_int_80_low'], data[i]['pred_int_80_high'],
                          alpha=0.5, edgecolor='#CC4F1B', facecolor='#FF9848', label='80%-PI')
         plt.fill_between(x_pred,
                          data[i]['pred_int_95_low'],
                          data[i]['pred_int_95_high'],
                          alpha=0.2, edgecolor='#CC4F1B', facecolor='#FF9848', label='95%-PI')
-        plt.title(model_names[i] + ' Time Series Forecasting')
+        plt.title(columnName[1] + ' ' + columnName[2] + ' Time Series Forecasting')
         plt.legend(loc=2)
-        plt.savefig('plots/oslo/' + model_names[i] + '_forecasting_horizon.png')
-        plt.show()
+        plt.savefig('plots/' + data_set + '/' + columnName[1] + '_' + columnName[2] + '_' + model_names[i] +
+                    '_forecasting_horizon.png')
+        #plt.show()
+        plt.close()
 
 
 def pipeline(model_paths):
@@ -82,31 +86,31 @@ def pipeline(model_paths):
     mc_data = read_files(model_paths[2], 'test_results.txt_forecast_horizon.csv')
     gan_data = read_files(model_paths[3], 'test_results_generator_5000.h5.txt_forecast_horizon.csv')
     data = [arima_data, es_data, mc_data, gan_data]
-    plot_figures(data, scaler.inverse_trainsforme(test[:cfg['window_size'] + len(data[0]['forecast'])]),
-                 cfg['window_size'])
+    plot_figures(data, scaler.inverse_transform(test[:cfg['window_size'] + len(data[0]['forecast'])]),
+                 cfg['window_size'], None, data_set='oslo')
 
 
 def avocado_pipeline(model_paths):
     cfg = load_config_file(model_paths[3]+'config.yml')
     train_df, test_df, scalers = load_data(cfg=cfg, window_size=cfg['window_size'])
-
-    for i in range(len(train_df.columns.values)):
-        column = train_df.columns.values[i]
-        test = test_df[column].values.reshape(-1, 1)
+    i = 0
+    for columnName, columnData in test_df.iteritems():
+        test = columnData.values.reshape(-1, 1)
         scaler = scalers[i]
-        arima_data = read_files(model_paths[0], 'test_results.txt_forecast_horizon.csv')
-        es_data = read_files(model_paths[1], 'test_results.txt_forecast_horizon.csv')
-        mc_data = read_files(model_paths[2], 'test_results.txt_forecast_horizon.csv')
-        gan_data = read_files(model_paths[3], 'test_results_generator_5000.h5.txt_forecast_horizon.csv')
+        arima_data = read_files(model_paths[0], columnName[1] + "_" + columnName[2] + '_forecast_horizon.csv')
+        es_data = read_files(model_paths[1],  columnName[1] + "_" + columnName[2] + '_forecast_horizon.csv')
+        mc_data = read_files(model_paths[2],  columnName[1] + "_" + columnName[2] + '__forecast_horizon.csv')
+        gan_data = read_files(model_paths[3], 'generator_30000.h5_' + columnName[1] + "_" + columnName[2] + '_test_results.txt_forecast_horizon.csv')
         data = [arima_data, es_data, mc_data, gan_data]
-        plot_figures(data, scaler.inverse_trainsforme(test[:cfg['window_size']+len(data[0]['forecast'])]),
-                     cfg['window_size'])
+        plot_figures(data, scaler.inverse_transform(test[:cfg['window_size']+len(data[0]['forecast'])]),
+                     cfg['window_size'], columnName, data_set='avocado')
+        i += 1
 
 
 if __name__ == '__main__':
-    model_path = ['results/oslo/arima/',
-                  'results/oslo/es/',
-                  'results/oslo/rnn/minmax/rnn_epochs_500_D_epochs_5_batch_size_64_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.001000/',
-                  'results/oslo/recurrentgan/minmax/rnn_epochs_5000_D_epochs_10_batch_size_64_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.001000/']
+    model_path = ['results/avocado/arima/',
+                  'results/avocado/es/',
+                  'results/avocado/rnn/minmax/rnn_epochs_40_D_epochs_5_batch_size_32_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.000500/',
+                  'results/avocado/recurrentgan/minmax/rnn_epochs_30000_D_epochs_3_batch_size_32_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.000100/']
     model_names = ['ARIMA', 'ETS', 'MC Dropout', 'ForGAN']
-    pipeline(model_path)
+    avocado_pipeline(model_path)

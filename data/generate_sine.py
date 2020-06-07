@@ -24,12 +24,11 @@ def generate_sine_data(num_points=2000, plot=False):
         plt.axvline(noise.mean(), color='b', linewidth=1)
         plt.show()
     print('Noise standard deviation:', noise.std())
-    """
+
     plt.figure()
+    plt.title('Sine Curve with Gaussian Noise')
     plt.plot(x, y)
     plt.show()
-    """
-
     return np.expand_dims(y, axis=-1)
 
 

@@ -11,7 +11,10 @@ from config.load_config import load_config_file
 def read_files(file):
     with open(file+'/config.yml', 'r') as f:
         cfg = yaml.load(f)
-    df = pd.read_csv(file + '/test_results.txt', header=0)
+    if cfg['data_source'].lower() in ['avocado', 'electricity']:
+        df = pd.read_csv(file + '/test_results_mean.txt', header=0)
+    else:
+        df = pd.read_csv(file + '/test_results.txt', header=0)
     return df, cfg
 
 
@@ -30,7 +33,7 @@ def print_results(folder):
 
 
 def main():
-    folder = 'results/oslo/rnn/minmax'
+    folder = 'results/avocado/rnn/minmax'
     print_results(folder=folder)
 
 

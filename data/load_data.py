@@ -51,7 +51,8 @@ def load_electricity(project_path=None):
     idx = pd.DatetimeIndex(freq="h", start="2018-01-01", periods=data_array.shape[1])
     # df = pd.DataFrame(data_array)
     df = pd.DataFrame(data=data_array.transpose(), index=idx, columns=map(str, np.arange(0, 370)))
-
+    df = df.loc['2018-01-01 00:00:0':'2019-01-01 00:00:0', '0':'49']
+    df.drop(['0', '2', '6', '11', '14', '23', '29', '31', '32', '38', '40'], axis=1, inplace=True)
     print(df.shape)
     return df
 
@@ -83,7 +84,12 @@ def load_avocado(project_path=None):
 
 if __name__ == "__main__":
     data = load_electricity(project_path="C:\\Users\\mathi\\PycharmProjects\\gan\\")
-    print(data.loc['2018-01-01 00:00:0':'2018-03-01 00:00:0', '0':'19'].shape)
+    i = 0
+    for columnName, columnData in data.iteritems():
+        plt.plot(data.loc['2018-01-01 00:00:0':'2019-01-01 00:00:0', columnName])
+        plt.title(columnName)
+        plt.show()
+
     """
     data = data[:int(len(data)*0.8)]
     print(data.shape)

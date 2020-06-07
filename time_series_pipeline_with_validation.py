@@ -170,7 +170,7 @@ def test_model(model, data, validation_mse, cfg, naive_error, scaler, plot=True,
         width_95 = width_95_1
         if min_max:
             forecast_std *= min_max
-    """
+
     with open(file_path, "a") as f:
         f.write("mse,smape,mase,std,coverage_80,coverage_95,width_80,width_95,msis_80,msis_95\n")
         for (mse, smape, mase, std, c_80, c_95, w_80, w_95, m_80, m_95) in zip(forecast_mse, forecast_smape,
@@ -178,7 +178,7 @@ def test_model(model, data, validation_mse, cfg, naive_error, scaler, plot=True,
                                                                                coverage_95, width_80, width_95, msis_80,
                                                                                msis_95):
             f.write("{0},{1},{2},{3},{4},{5},{6},{7},{8},{9}\n".format(mse, smape, mase, std, c_80, c_95, w_80, w_95,
-                                                                       m_80, m_95))"""
+                                                                       m_80, m_95))
     try:
         file_name = file_name.replace('validation_results.txt', '')
     except:

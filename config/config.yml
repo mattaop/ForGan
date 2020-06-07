@@ -1,8 +1,8 @@
-model_name: arima # RNN, ES, ARIMA, GAN, ConvGAN, RecurrentGAN, RecurrentConvGAN, RecurrentConvDSGAN, RecurrentConditionalGAN
+model_name: RecurrentGAN # RNN, ES, ARIMA, GAN, ConvGAN, RecurrentGAN, RecurrentConvGAN, RecurrentConvDSGAN, RecurrentConditionalGAN
 loss_function: kl # kl, w, ds
 
-epochs: 40
-batch_size: 64
+epochs: 3000
+batch_size: 32
 learning_rate: 0.0001
 discriminator_epochs: 5
 
@@ -24,7 +24,7 @@ plot_rate: 1000
 print_coverage: True # True, False, Will slow down training, but print coverage during training
 save_model_interval: 100
 
-data_source: avocado # sine, oslo, australia, avocado
+data_source: avocado # sine, oslo, australia, avocado, electricity
 val_split: 0.1
 test_split: 0.2
 scaler: MinMax # MinMax (default), Robust, Standard
