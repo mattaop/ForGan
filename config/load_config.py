@@ -19,7 +19,7 @@ def load_config_file(file_name, print_config=False):
     if cfg['data_source'].lower() in ['sine', 'oslo']:
         cfg['seasonality'] = 12
     elif cfg['data_source'].lower() in ['avocado']:
-        cfg['seasonality'] = 1
+        cfg['seasonality'] = 52
     elif cfg['data_source'].lower() in ['electricity']:
         cfg['seasonality'] = 24
     return cfg

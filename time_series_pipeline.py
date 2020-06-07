@@ -71,16 +71,32 @@ def load_data(cfg, window_size):
     print('Data shape', data.shape)
     train = data[:-int(len(data)*cfg['test_split'])]
     test = data[-int(len(data)*cfg['test_split']+window_size):]
+    """
+    for columnName, columnData in train.iteritems():
+        fig = plt.figure()
+        ax = fig.gca()
+        ax.plot(train[columnName],  label='Train')
+        ax.plot(test.iloc[window_size:][columnName], label='Test')
+        plt.title(columnName[0] + ' of ' + columnName[2] + ' avocado for ' + columnName[1])
+        plt.ylabel('Price')
+        plt.xlabel('Date')
+        ax.set_xticks(data[columnName].index[::52])
+        ax.set_xticklabels(data[columnName].index[::52].date)
+        plt.legend()
+        plt.savefig('plots/avocado/timeseries/' + columnName[1]+'_'+columnName[2])
+        # plt.show()
+    """
     train, test, scaler = scale_data(train, test, cfg)
     print(train.shape)
     """
     for columnName, columnData in train.iteritems():
-        #plt.figure()
+        plt.figure()
         plt.title(columnName[0] + ' of ' + columnName[2] + ' avocado for ' + columnName[1])
         plt.plot(test[columnName], label='Test')
         plt.plot(train[columnName],  label='Train')
         plt.legend()
-        plt.savefig('plots/avocado/timeseries/'+ columnName[1]+'_'+columnName[2])
+        plt.savefig('plots/avocado/timeseries/' + columnName[1]+'_'+columnName[2])
+        # plt.show()
     """
     return train, test, scaler
 

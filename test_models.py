@@ -129,9 +129,9 @@ def avocado_pipeline(model_path, model_name):
                                           forecast_horizon=model.forecasting_horizon)
         trained_model, validation_mse, val = train_model(model=model, data=train, cfg=cfg)
         if cfg['data_source'] == 'avocado':
-            test_name = "/" + columnName[1] + "_" + columnName[2] + "_test_results.txt"
+            test_name = "/" + model_name + "_" + columnName[1] + "_" + columnName[2] + "_test_results.txt"
         else:
-            test_name = "/" + columnName + "_test_results.txt"
+            test_name = "/" + model_name + "_" + columnName + "_test_results.txt"
         test_model(model=trained_model, data=test, validation_mse=validation_mse, cfg=cfg,
                    naive_error=naive_error, scaler=scaler, plot=False, file_name=test_name,
                    min_max=(np.max(scaler.inverse_transform(train)) - np.min(scaler.inverse_transform(train))) /
@@ -140,6 +140,6 @@ def avocado_pipeline(model_path, model_name):
 
 
 if __name__ == '__main__':
-    model_path = 'results/avocado/recurrentgan/minmax/rnn_epochs_30000_D_epochs_5_batch_size_64_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.000100/'
+    model_path = 'results/avocado/recurrentgan/minmax/rnn_epochs_30000_D_epochs_3_batch_size_32_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.000100/'
     model_name = 'generator_30000.h5'
     avocado_pipeline(model_path, model_name)
