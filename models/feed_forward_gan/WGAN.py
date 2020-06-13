@@ -60,10 +60,10 @@ if __name__ == '__main__':
     coverage_80_PI_1, coverage_95_PI_1 = [], []
     coverage_80_PI_2, coverage_95_PI_2 = [], []
     kl_div, js_div, uncertainty_list = [], [], []
-    for i in range(10):
-        gan = WGAN(config['gan'])
+    for i in range(5):
+        gan = WGAN(config)
         gan.build_model()
-        gan.train(epochs=2000, batch_size=1024)
+        gan.train(epochs=3000, batch_size=1024)
         predictions = gan.monte_carlo_prediction(generate_noise(5000), mc_forward_passes=5000)
         prediction_mean = predictions.mean(axis=0)
         uncertainty = predictions.std(axis=0)

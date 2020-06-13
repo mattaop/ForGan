@@ -15,10 +15,10 @@ np.random.seed(seed)
 tf.set_random_seed(seed)
 
 from keras import backend as k
-config = tf.ConfigProto(intra_op_parallelism_threads=1, inter_op_parallelism_threads=1,
+config = tf.compat.v1.ConfigProto(intra_op_parallelism_threads=1, inter_op_parallelism_threads=1,
                         allow_soft_placement=True, device_count={'CPU': 1})
-sess = tf.Session(graph=tf.get_default_graph(), config=config)
-k.set_session(sess)
+sess = tf.compat.v1.Session(graph=tf.compat.v1.get_default_graph(), config=config)
+tf.compat.v1.keras.backend.set_session(sess)
 
 import time
 import matplotlib.pyplot as plt

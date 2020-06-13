@@ -6,7 +6,7 @@ show_plot = True
 
 
 def read_files(file_name):
-    df = pd.read_csv(file_name.lower() + '/test_results.txt', header=0)
+    df = pd.read_csv(file_name.lower() + '/validation_results.txt', header=0)
     return df
 
 
@@ -74,10 +74,15 @@ def main():
                                'results/sine/es',
                                'results/sine/rnn/minmax/rnn_epochs_2000_D_epochs_3_batch_size_64_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.001000',
                                'results/sine/recurrentgan/minmax/rnn_epochs_1500_D_epochs_3_batch_size_32_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.001000']
+    wgan_paths = ['results/sine/recurrentgan/minmax/rnn_epochs_1500_D_epochs_3_batch_size_32_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.001000',
+                  'results/sine/recurrentgan/minmax/rnn_epochs_1500_D_epochs_3_batch_size_32_noise_vec_100_gnodes_16_dnodes_64_loss_w_lr_0.001000',
+                  'results/sine/recurrentgan/minmax/rnn_epochs_5000_D_epochs_5_batch_size_32_noise_vec_100_gnodes_16_dnodes_64_loss_w_lr_0.000100',
+                  'results/sine/recurrentgan/minmax/rnn_epochs_10000_D_epochs_5_batch_size_32_noise_vec_100_gnodes_16_dnodes_64_loss_w_lr_0.000100']
+    wgan_models = ['GAN', 'WGAN', 'Optimal WGAN', 'Optimal WGAN']
 
-    model_paths = compare_model_paths_oslo
+    model_paths = wgan_paths
     labels = noise_label
-    model_names = compare_models
+    model_names = wgan_models
     print_results(model_paths=model_paths,
                   labels=labels,
                   model_names=model_names,)

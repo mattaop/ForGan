@@ -53,17 +53,14 @@ plt.show()
 
 
 real_samples = np.random.normal(0, 0.1, 5000)
+y1 = np.random.normal(-0.5, 0.1, (5000, 1))
+y2 = np.random.normal(1, 0.2, (5000, 1))
+w = np.random.binomial(1, 0.5, (5000, 1))  # 50:50 random choice
+real_samples = np.multiply(w, y1) + np.multiply(1 - w, y2)
 sns.kdeplot(real_samples.flatten(), color='blue', alpha=0.6, shade=True)
 plt.xlabel('Sample value', fontsize=12)
 plt.ylabel('Density', fontsize=12)
-plt.title('Gaussian Distributed Samples', fontsize=14)
+plt.title('Bimodal Distributed Samples', fontsize=14)
 plt.legend()
 plt.show()
 
-np.random.seed(0)
-x = np.linspace(1, num_points, num_points)
-mean = 0
-std = 0.1
-noise = np.random.normal(mean, std, num_points)
-
-y = np.sin(x * np.pi / 6) + noise

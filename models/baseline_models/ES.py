@@ -31,24 +31,28 @@ class ES:
     def fit_es(self, train):
         # scaler = MinMaxScaler(feature_range=(10 ** (-10), 1))
         # train = np.array(x[:self.window_size], y)
-        trends = [None, 'add', 'add_damped', 'mul']
+        trends = [None, 'add', 'add_damped']
         seasons = [None, 'add', 'mul']
+        use_boxcox = [True, False]
+        remove_bias = [True, False]
         best_model_parameters = [None, None, False]  # trend, season, damped
         best_aicc = np.inf
         for trend in trends:
             for season in seasons:
-                if trend == 'add_damped':
-                    trend = 'add'
-                    damped = True
-                else:
-                    damped = False
-                model_es = ExponentialSmoothing(train, seasonal_periods=self.seasonality,
-                                                trend=trend, seasonal=season,
-                                                damped=damped)
-                model_es = model_es.fit(optimized=True)
-                if model_es.aicc < best_aicc:
-                    best_model_parameters = [trend, season, damped]
-                    best_aicc = model_es.aicc
+                for boxcox in use_boxcox:
+                    for bias in remove_bias:
+                        if trend == 'add_damped':
+                            trend = 'add'
+                            damped = True
+                        else:
+                            damped = False
+                        model_es = ExponentialSmoothing(train, seasonal_periods=self.seasonality,
+                                                        trend=trend, seasonal=season,
+                                                        damped=damped)
+                        model_es = model_es.fit(optimized=True, use_boxcox=boxcox, remove_bias=bias)
+                        if model_es.aicc < best_aicc:
+                            best_model_parameters = [trend, season, damped, boxcox, bias]
+                            best_aicc = model_es.aicc
                 # print(trend, season, model_es.aicc)
                 # print(model_es.params)
         model_es = ExponentialSmoothing(train, seasonal_periods=self.seasonality,
@@ -56,11 +60,12 @@ class ES:
                                         damped=best_model_parameters[2])
         # model_es = ExponentialSmoothing(train, seasonal_periods=self.seasonality, trend=None, seasonal='add',  damped=False)
 
-        model_es = model_es.fit(optimized=True)
+        model_es = model_es.fit(optimized=True, use_boxcox=best_model_parameters[3],
+                                remove_bias=best_model_parameters[4])
         # best_model_parameters[1] = 'add'
         print(model_es.params)
         print('ETS: T=', best_model_parameters[0], ', S=', best_model_parameters[1], ', damped=',
-              best_model_parameters[2])
+              best_model_parameters[2], ', BoxCox = ', best_model_parameters[3], ', bias = ', best_model_parameters[4])
         print('AICc', model_es.aicc)
         self.exponential_smoothing = model_es
 

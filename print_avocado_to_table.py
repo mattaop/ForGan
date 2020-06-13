@@ -85,9 +85,9 @@ def print_results(model_paths, model_names):
 def main():
     compare_models = ['ARIMA', 'ES', 'MC Dropout', 'ForGAN']
     compare_model_paths = ['results/avocado/arima',
-                                'results/avocado/es',
-                                'results/avocado/rnn/minmax/rnn_epochs_1500_D_epochs_3_batch_size_32_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.000100',
-                                'results/avocado/recurrentgan/minmax/rnn_epochs_30000_D_epochs_3_batch_size_32_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.000100']
+                            'results/avocado/es',
+                            'results/avocado/rnn/minmax/rnn_epochs_50_D_epochs_3_batch_size_64_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.000100',
+                           'results/avocado/recurrentgan/minmax/rnn_epochs_30000_D_epochs_3_batch_size_32_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.000100']
     model_paths = compare_model_paths
     model_names = compare_models
     print_results(model_paths=model_paths,

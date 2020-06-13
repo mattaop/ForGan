@@ -5,7 +5,6 @@ from sklearn.metrics import mean_squared_error
 from keras import Model
 from keras.layers import *
 from keras.optimizers import Adam
-from keras_radam import RAdam
 import tensorflow as tf
 from tqdm import tqdm
 
@@ -20,7 +19,7 @@ class ConvGAN(RecurrentGAN):
     def __init__(self, cfg):
         RecurrentGAN.__init__(self, cfg)
         self.plot_folder = 'ConvGAN'
-        self.optimizer = RAdam(lr=cfg['learning_rate'])
+        self.optimizer = Adam(lr=cfg['learning_rate'])
         self.loss_function = 'binary_crossentropy'
 
     def build_generator(self):

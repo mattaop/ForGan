@@ -2,7 +2,8 @@ import numpy as np
 from keras import backend
 from keras import Model
 from keras.layers import *
-from keras.optimizers import RMSprop
+from keras.optimizers import RMSprop, Adam
+from keras.initializers import RandomNormal
 
 from utility.ClipConstraint import ClipConstraint
 from models.recurrent_gan.RecurrentGAN import RecurrentGAN
@@ -13,7 +14,7 @@ class RecurrentWGAN(RecurrentGAN, WGAN):
     def __init__(self, cfg):
         RecurrentGAN.__init__(self, cfg)
         self.plot_folder = 'RecurrentWGAN'
-        self.optimizer = RMSprop(lr=cfg['learning_rate'])
+        self.optimizer = Adam(lr=cfg['learning_rate'])
         self.loss_function = self.wasserstein_loss
 
     def wasserstein_loss(self, y_true, y_pred):
@@ -38,7 +39,16 @@ class RecurrentWGAN(RecurrentGAN, WGAN):
         # define the constraint
         const = ClipConstraint(0.01)
 
-        x = SimpleRNN(self.discriminator_nodes, return_sequences=False, kernel_constraint=const)(x)
+        # x = SimpleRNN(self.discriminator_nodes, return_sequences=False, kernel_constraint=const)(x)
+
+        if self.layers == 'lstm':
+            x = LSTM(self.discriminator_nodes, return_sequences=False, kernel_constraint=const,
+                     kernel_initializer=self.weight_init)(x)
+        else:
+            x = SimpleRNN(self.discriminator_nodes, return_sequences=False, kernel_constraint=const,
+                          kernel_initializer=self.weight_init)(x)
+        if self.batch_norm:
+            x = BatchNormalization()(x)
         # x = BatchNormalization()(x)
         # x = LeakyReLU(alpha=0.2)(x)
         x = Dense(self.discriminator_nodes, kernel_constraint=const)(x)

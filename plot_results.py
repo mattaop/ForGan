@@ -15,7 +15,7 @@ def read_training_files(file_name, data):
     elif data == 'validation':
         df = pd.read_csv(file_name + '/validation_results.txt', header=0)
     else:
-        df = pd.read_csv(file_name + '/test_results.txt', header=0)
+        df = pd.read_csv(file_name + '/test_results_mean.txt', header=0)
 
     return df
 
@@ -38,7 +38,7 @@ def plot_results(save_file, model_paths, file_labels, title, x_label, y_label, v
     plt.ylabel(y_label)
     plt.legend()
     plt.savefig('plots/' + save_file)
-    # plt.show()
+    plt.show()
     if show_plot:
         plt.show()
 
@@ -137,11 +137,14 @@ def main():
                         'recurrentgan/rnn_epochs_1500_D_epochs_5_batch_size_128_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.001000',
                         'recurrentgan/rnn_epochs_1500_D_epochs_5_batch_size_256_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.001000',]
     batch_size_labels = ['Batch size = 16', 'Batch size = 32', 'Batch size = 64', 'Batch size = 128', 'Batch size = 256']
-
+    w_gan_path = ['recurrentgan/minmax/rnn_epochs_1500_D_epochs_3_batch_size_32_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.001000',
+                  'recurrentgan/minmax/rnn_epochs_1500_D_epochs_3_batch_size_32_noise_vec_100_gnodes_16_dnodes_64_loss_w_lr_0.001000',
+                  'recurrentgan/minmax/rnn_epochs_5000_D_epochs_5_batch_size_32_noise_vec_100_gnodes_16_dnodes_64_loss_w_lr_0.000100']
+    w_gan_label = ['GAN', 'WGAN', 'Optimal WGAN']
     data_set = 'sine'
-    save_file_as = 'noise_vec'
-    model_paths = noise_paths
-    labels = noise_label
+    save_file_as = 'wgan'
+    model_paths = w_gan_path
+    labels = w_gan_label
     plot_training_results(model_paths=model_paths,
                           file_labels=labels,
                           save_file=save_file_as,
@@ -150,16 +153,16 @@ def main():
                                  'Validation 95% Prediction Interval Coverage'],
                           plot_rate=25, data_set=data_set)
 
-    plot_validation_results(model_paths=model_paths,
-                            file_labels=labels,
-                            save_file=save_file_as,
-                            title=['Forecast Validation Mean Squared Error',
-                                   'Forecast Validation Symmetric Mean Absolute Percentage Error',
-                                   'Forecast Mean Absolute Scaled Error',
-                                   'Forecast Validation 80% Prediction Interval Coverage',
-                                   'Forecast Validation 95% Prediction Interval Coverage'
-                                   ],
-                            data_set=data_set)
+    #plot_validation_results(model_paths=model_paths,
+    #                        file_labels=labels,
+    #                        save_file=save_file_as,
+    #                        title=['Forecast Validation Mean Squared Error',
+    #                               'Forecast Validation Symmetric Mean Absolute Percentage Error',
+    #                               'Forecast Mean Absolute Scaled Error',
+    #                               'Forecast Validation 80% Prediction Interval Coverage',
+    #                               'Forecast Validation 95% Prediction Interval Coverage'
+    #                               ],
+    #                        data_set=data_set)
 
     model_paths_oslo = ['arima',
                    'es',
@@ -169,13 +172,19 @@ def main():
                        'es',
                        'rnn/minmax/rnn_epochs_2000_D_epochs_3_batch_size_64_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.001000',
                        'recurrentgan/minmax/rnn_epochs_1500_D_epochs_3_batch_size_32_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.001000']
+
+    model_paths_avocado = ['arima',
+                           'es',
+                           'rnn/minmax/rnn_epochs_50_D_epochs_3_batch_size_64_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.000100',
+                           'recurrentgan/minmax/rnn_epochs_30000_D_epochs_3_batch_size_32_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.000100']
+
     labels = ['ARIMA',
               'ETS',
               'MC dropout',
               'ForGAN']
     save_file_as = 'compare'
-    data_set = 'oslo'
-    plot_test_results(model_paths=model_paths_oslo,
+    data_set = 'avocado'
+    plot_test_results(model_paths=model_paths_avocado,
                       file_labels=labels,
                       save_file=save_file_as,
                       title=['Forecast Mean Squared Error',

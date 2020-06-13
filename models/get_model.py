@@ -1,7 +1,7 @@
 from models.feed_forward_gan import GAN, WGAN, DSGAN
 from models.conv_gan import ConvGAN, ConvWGAN
 from models.recurrent_gan import RecurrentGAN, RecurrentWGAN, RecurrentDSGAN, RecurrentConvGAN, RecurrentConvWGAN, \
-    RecurrentConvDSGAN, RecurrentConditionalGAN
+    RecurrentConvDSGAN, RecurrentConditionalGAN, RecurrentWGAN2, RecurrentWGAN3
 from models.baseline_models import RNN, ES, ARIMA
 from models.hybrid_gan import ESWGAN, ESRecurrentWGAN
 
@@ -73,6 +73,12 @@ def get_gan(cfg):
         else:
             print('Model GAN has no loss:', loss)
             AttributeError()
+    elif model_name.lower() == 'wgan_keras':
+        print('Keras implementation')
+        model = RecurrentWGAN2.WGAN2(cfg)
+    elif model_name.lower() == 'wgan_gp':
+        print('Keras implementation')
+        model = RecurrentWGAN3.RecurrentWGAN3(cfg)
     elif model_name.lower() == 'rnn':
         print('Model: RNN')
         model = RNN.RNN(cfg)

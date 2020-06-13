@@ -12,13 +12,13 @@ print(tf.__version__)
 seed = 4
 rn.seed(seed)
 np.random.seed(seed)
-tf.set_random_seed(seed)
+# tf.random.set_seed(seed)
 
 from keras import backend as k
-config = tf.ConfigProto(intra_op_parallelism_threads=1, inter_op_parallelism_threads=1,
-                        allow_soft_placement=True, device_count={'CPU': 1})
-sess = tf.Session(graph=tf.get_default_graph(), config=config)
-k.set_session(sess)
+#config = tf.ConfigProto(intra_op_parallelism_threads=1, inter_op_parallelism_threads=1,
+#                        allow_soft_placement=True, device_count={'CPU': 1})
+#sess = tf.Session(graph=tf.get_default_graph(), config=config)
+#k.set_session(sess)
 
 import time
 from tqdm import tqdm
@@ -45,8 +45,12 @@ def time_series_avocado_pipeline(cfg):
         naive_error = compute_naive_error(scaler.inverse_transform(train), seasonality=cfg['seasonality'],
                                           forecast_horizon=model.forecasting_horizon)
         start_time = time.time()
-        validation_name = "/" + columnName[1] + "_" + columnName[2] + "_validation_results.txt"
-        test_name = "/" + columnName[1] + "_" + columnName[2] + "_test_results.txt"
+        if cfg['data_source'] == 'avocado':
+            validation_name = "/" + columnName[1] + "_" + columnName[2] + "_validation_results.txt"
+            test_name = "/" + columnName[1] + "_" + columnName[2] + "_test_results.txt"
+        else:
+            validation_name = "/" + columnName + "_validation_results.txt"
+            test_name = "/" + columnName + "_test_results.txt"
         trained_model, validation_mse, val = train_model(model, train, epochs=cfg['epochs'], cfg=cfg,
                                                          batch_size=cfg['batch_size'], verbose=0)
         training_time = time.time() - start_time
@@ -57,7 +61,7 @@ def time_series_avocado_pipeline(cfg):
                    disable_pbar=True)
         mse, smape, mase, std, c_80, c_95, w_80, w_95, msis_80, msis_95 = \
             test_model(model=trained_model, data=test, validation_mse=validation_mse, cfg=cfg,
-                       naive_error=naive_error, scaler=scaler, plot=False, file_name=test_name,
+                       naive_error=naive_error, scaler=scaler, plot=True, file_name=test_name,
                        min_max=(np.max(scaler.inverse_transform(train)) - np.min(scaler.inverse_transform(train)))
                                / (np.max(train) - np.min(train)), disable_pbar=True)
         msis_80_list.append(msis_80), msis_95_list.append(msis_95)

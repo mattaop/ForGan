@@ -14,14 +14,14 @@ print(tf.__version__)
 seed = 4
 rn.seed(seed)
 np.random.seed(seed)
-tf.set_random_seed(seed)
+#tf.set_random_seed(seed)
 
 from keras import backend as k
 
-config = tf.ConfigProto(intra_op_parallelism_threads=1, inter_op_parallelism_threads=1,
-                        allow_soft_placement=True, device_count={'CPU': 1})
-sess = tf.Session(graph=tf.get_default_graph(), config=config)
-k.set_session(sess)
+#config = tf.ConfigProto(intra_op_parallelism_threads=1, inter_op_parallelism_threads=1,
+#                        allow_soft_placement=True, device_count={'CPU': 1})
+#sess = tf.Session(graph=tf.get_default_graph(), config=config)
+#k.set_session(sess)
 
 import time
 import matplotlib.pyplot as plt
@@ -34,7 +34,7 @@ from config.load_config import load_config_file, write_config_file
 from models.get_model import get_gan
 from utility.split_data import split_sequence
 from data.generate_sine import generate_sine_data
-from data.load_data import load_oslo_temperature, load_australia_temperature, load_avocado, load_electricity
+from data.load_data import load_oslo_temperature, load_australia_temperature, load_avocado, load_electricity, load_sub_electricity
 from utility.compute_statistics import *
 
 
@@ -65,7 +65,7 @@ def load_data(cfg, window_size):
         data = load_avocado()
         print(data.shape)
     elif cfg['data_source'].lower() == 'electricity':
-        data = load_electricity()
+        data = load_sub_electricity()
     else:
         return None
     print('Data shape', data.shape)

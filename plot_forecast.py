@@ -56,7 +56,7 @@ def plot_figures(data, test, window_size, columnName, data_set='oslo'):
     plt.title(columnName[1] + ' ' + columnName[2] + ' Time Series Forecasting')
     plt.legend()
     plt.savefig('plots/' + data_set + '/' + columnName[1] + '_' + columnName[2] + '_forecasting_horizon.png')
-    #plt.show()
+    # plt.show()
     plt.close()
 
     for i in range(len(data)):
@@ -73,7 +73,7 @@ def plot_figures(data, test, window_size, columnName, data_set='oslo'):
         plt.legend(loc=2)
         plt.savefig('plots/' + data_set + '/' + columnName[1] + '_' + columnName[2] + '_' + model_names[i] +
                     '_forecasting_horizon.png')
-        #plt.show()
+        # plt.show()
         plt.close()
 
 
@@ -85,6 +85,7 @@ def pipeline(model_paths):
     es_data = read_files(model_paths[1], 'test_results.txt_forecast_horizon.csv')
     mc_data = read_files(model_paths[2], 'test_results.txt_forecast_horizon.csv')
     gan_data = read_files(model_paths[3], 'test_results_generator_5000.h5.txt_forecast_horizon.csv')
+    # _generator_5000.h5
     data = [arima_data, es_data, mc_data, gan_data]
     plot_figures(data, scaler.inverse_transform(test[:cfg['window_size'] + len(data[0]['forecast'])]),
                  cfg['window_size'], None, data_set='oslo')
@@ -101,6 +102,7 @@ def avocado_pipeline(model_paths):
         es_data = read_files(model_paths[1],  columnName[1] + "_" + columnName[2] + '_forecast_horizon.csv')
         mc_data = read_files(model_paths[2],  columnName[1] + "_" + columnName[2] + '__forecast_horizon.csv')
         gan_data = read_files(model_paths[3], 'generator_30000.h5_' + columnName[1] + "_" + columnName[2] + '_test_results.txt_forecast_horizon.csv')
+        # 'generator_30000.h5_' +
         data = [arima_data, es_data, mc_data, gan_data]
         plot_figures(data, scaler.inverse_transform(test[:cfg['window_size']+len(data[0]['forecast'])]),
                      cfg['window_size'], columnName, data_set='avocado')
@@ -110,7 +112,7 @@ def avocado_pipeline(model_paths):
 if __name__ == '__main__':
     model_path = ['results/avocado/arima/',
                   'results/avocado/es/',
-                  'results/avocado/rnn/minmax/rnn_epochs_40_D_epochs_5_batch_size_32_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.001000/',
+                  'results/avocado/rnn/minmax/rnn_epochs_50_D_epochs_3_batch_size_64_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.000100/',
                   'results/avocado/recurrentgan/minmax/rnn_epochs_30000_D_epochs_3_batch_size_32_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.000100/']
     model_names = ['ARIMA', 'ETS', 'MC Dropout', 'ForGAN']
     avocado_pipeline(model_path)

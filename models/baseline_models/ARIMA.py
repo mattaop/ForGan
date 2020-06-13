@@ -31,8 +31,8 @@ class ARIMA:
     def fit(self, x, y, epochs=1, batch_size=32, verbose=1):
         # fit ARIMA
         train = np.concatenate([x[0, :, 0], y[:, 0, 0]])
-        auto_model = auto_arima(train, start_p=1, start_q=1, max_p=5, max_q=5, max_d=3, max_P=2, max_Q=2, max_D=2,
-                                m=self.seasonality, start_P=1, start_Q=1, seasonal=True, d=None, D=None,
+        auto_model = auto_arima(train, start_p=1, start_q=1, max_p=3, max_q=3, max_d=2, max_P=7, max_Q=7, max_D=2,
+                                m=self.seasonality, start_P=7, start_Q=7, seasonal=True, d=None, D=None,
                                 suppress_warnings=True, stepwise=True, information_criterion='aicc',
                                 error_action="ignore")
 

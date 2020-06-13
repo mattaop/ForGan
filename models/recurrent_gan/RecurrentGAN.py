@@ -6,6 +6,8 @@ from keras import Model
 from keras.layers import *
 from keras.optimizers import Adam
 import keras.backend as K
+from keras.initializers import RandomNormal
+
 from keras.models import load_model
 import tensorflow as tf
 from tqdm import tqdm, trange
@@ -38,9 +40,10 @@ class RecurrentGAN(GAN):
         self.mc_forward_passes = cfg['mc_forward_passes']
 
         self.layers = cfg['layers']
-        self.num_layers = 1
+        self.num_layers = cfg['number_of_recurrent_layers']
         self.optimizer = Adam(cfg['learning_rate'], 0.5)
         self.loss_function = 'binary_crossentropy'
+        self.weight_init = RandomNormal(mean=0., stddev=0.02)
 
     def build_model(self):
         print('=== Config===', '\nModel name:', self.model_name, '\nNoise vector size:', self.noise_vector_size,
@@ -85,13 +88,13 @@ class RecurrentGAN(GAN):
         historic_inp = Input(shape=historic_shape)
         hist = historic_inp
         if self.layers == 'lstm':
-            for i in range(self.num_layers-1):
-                hist = LSTM(self.generator_nodes, return_sequences=True)(hist)
-            hist = LSTM(self.generator_nodes, return_sequences=False)(hist)
+            #for i in range(self.num_layers-1):
+            #    hist = LSTM(self.generator_nodes, return_sequences=True)(hist)
+            hist = LSTM(self.generator_nodes, return_sequences=False, kernel_initializer=self.weight_init)(hist)
         else:
-            for i in range(self.num_layers-1):
-                hist = SimpleRNN(self.generator_nodes, return_sequences=True)(hist)
-            hist = SimpleRNN(self.generator_nodes, return_sequences=False)(hist)
+            #for i in range(self.num_layers-1):
+            #    hist = SimpleRNN(self.generator_nodes, return_sequences=True)(hist)
+            hist = SimpleRNN(self.generator_nodes, return_sequences=False, kernel_initializer=self.weight_init)(hist)
 
         x = Concatenate(axis=1)([hist, noise_inp])
         if self.dropout:
@@ -107,7 +110,7 @@ class RecurrentGAN(GAN):
         prediction = Dense(self.output_size)(x)
 
         model = Model(inputs=[historic_inp, noise_inp], outputs=prediction)
-        # model.summary()
+        model.summary()
         return model
 
     def build_discriminator(self):
@@ -123,11 +126,11 @@ class RecurrentGAN(GAN):
         if self.layers == 'lstm':
             for i in range(self.num_layers-1):
                 x = LSTM(self.discriminator_nodes, return_sequences=True)(x)
-            x = LSTM(self.discriminator_nodes, return_sequences=False)(x)
+            x = LSTM(self.discriminator_nodes, return_sequences=False, kernel_initializer=self.weight_init)(x)
         else:
             for i in range(self.num_layers-1):
                 x = SimpleRNN(self.discriminator_nodes, return_sequences=True)(x)
-            x = SimpleRNN(self.discriminator_nodes, return_sequences=False)(x)
+            x = SimpleRNN(self.discriminator_nodes, return_sequences=False, kernel_initializer=self.weight_init)(x)
 
         if self.batch_norm:
             x = BatchNormalization()(x)
@@ -146,7 +149,7 @@ class RecurrentGAN(GAN):
         validity = Dense(1, activation='sigmoid')(x)
 
         model = Model(inputs=[historic_inp, future_inp], outputs=validity)
-        # model.summary()
+        model.summary()
 
         return model
 
@@ -181,13 +184,13 @@ class RecurrentGAN(GAN):
         idx = np.random.randint(0, x.shape[0], batch_size)
         historic_time_series = x[idx]
 
-        valid_y = np.array([1] * batch_size)
+        valid_y = self._get_labels(batch_size=batch_size, real=True)
 
         # Train the generator
         g_loss = self.combined.train_on_batch([historic_time_series, generator_noise], valid_y)
         return g_loss
 
-    def train_discriminator_on_batch(self, x, y, half_batch, mask):
+    def train_discriminator_on_batch(self, x, y, half_batch, mask, epoch):
         # Select a random half batch of images
         idx = np.random.randint(0, x.shape[0], self.discriminator_epochs*half_batch)
         historic_time_series = x[idx]
@@ -216,7 +219,7 @@ class RecurrentGAN(GAN):
         # Train the discriminator
         d_loss = self.discriminator.fit([hist_input, future_input], y_input, epochs=1, batch_size=half_batch,
                                         shuffle=False, verbose=0)
-        return [np.mean(d_loss.history['loss']), np.mean(d_loss.history['acc'])]
+        return [np.mean(d_loss.history['loss']), np.mean(d_loss.history['accuracy'])]
 
     def fit(self, x, y, x_val=None, y_val=None, epochs=1, batch_size=32, verbose=1):
         if len(y_val) > 1000:
@@ -262,7 +265,7 @@ class RecurrentGAN(GAN):
                     d_loss = 0.5 * np.add(d_loss_real, d_loss_fake)
 
             else:
-                d_loss = self.train_discriminator_on_batch(x, y, half_batch, training_mask)
+                d_loss = self.train_discriminator_on_batch(x, y, half_batch, training_mask, epoch)
 
             # ---------------------
             #  Train Generator

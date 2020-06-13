@@ -39,7 +39,7 @@ def time_series_avocado_baseline_pipeline(cfg):
     for columnName, columnData in tqdm(df_train.iteritems(), total=df_train.columns.shape[0]):
         model = configure_model(cfg=cfg)
 
-        train = df_train[columnName].values.reshape(-1, 1)
+        train = df_train[columnName].values.reshape(-1, 1)[int(0.5*len(df_train)):]  # dddddddddddddddd
         test = df_test[columnName].values.reshape(-1, 1)
         scaler = scalers[i]
         naive_error = compute_naive_error(scaler.inverse_transform(train), seasonality=cfg['seasonality'],
@@ -53,7 +53,7 @@ def time_series_avocado_baseline_pipeline(cfg):
         else:
             test_file_name = "/" + columnName + "_test_results.txt"
         mse, smape, mase, std, c_80, c_95, w_80, w_95, msis_80, msis_95 = \
-            test_model(model=trained_model, data=test, naive_error=naive_error, scaler=scaler, cfg=cfg, plot=False,
+            test_model(model=trained_model, data=test, naive_error=naive_error, scaler=scaler, cfg=cfg, plot=True,
                        file_name=test_file_name,
                        min_max=(np.max(scaler.inverse_transform(train))-np.min(scaler.inverse_transform(train))) /
                                (np.max(train)-np.min(train)), disable_pbar=True)
