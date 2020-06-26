@@ -19,21 +19,21 @@ def read_files(file):
 
 
 def print_results(folder):
-    print("Layer | Epochs | Loss | D_epochs | Noise vector | Batch Size | G nodes | D nodes | MSE | MASE | 80c | 95c | ")
+    print("Layer | Epochs | Loss | D_epochs | Noise vector | Batch Size | G nodes | D nodes  | Window s | MSE | MASE | 80c | 95c | ")
     sub_folders = [f.path for f in os.scandir(folder) if f.is_dir()]
     for sub_folder in sub_folders:
         try:
             df, cfg = read_files(sub_folder)
-            print(cfg['layers'] + "  |  %d  | " % (cfg['epochs']) + cfg['loss_function'] +  " |    %d    |     %d     |     %d     |    %d    |    %d   | %.4f |%.4f| %.2f| %.2f| "
+            print(cfg['layers'] + "  |  %d  | " % (cfg['epochs']) + cfg['loss_function'] +  " |    %d    |     %d     |     %d     |    %d   |    %d   |    %d   | %.4f |%.4f| %.2f| %.2f| "
                   %  (cfg['discriminator_epochs'], cfg['noise_vector_size'], cfg['batch_size'], cfg['generator_nodes'],
-                     cfg['discriminator_nodes'], np.mean(df['mse'])*1, np.mean(df['mase'])*1,
+                     cfg['discriminator_nodes'], cfg['window_size'], np.mean(df['mse'])*1, np.mean(df['mase'])*1,
                      np.mean(df['coverage_80'])*100, np.mean(df['coverage_95'])*100))
         except:
             pass
 
 
 def main():
-    folder = 'results\\electricity\\recurrentgan\\minmax'
+    folder = 'results\\electricity\\rnn\\minmax'
     print_results(folder=folder)
 
 

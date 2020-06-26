@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 
 def generate_noise(num_points=2000, plot=False):
-    noise_distribution = 'Bimodal'
+    noise_distribution = 'gaussian'
     if noise_distribution.lower() in ['gaussian', 'normal']:
         print('Noise distribution: Gaussian')
         noise = np.random.normal(0, 0.1, (num_points, 1))

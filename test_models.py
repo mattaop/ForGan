@@ -140,6 +140,6 @@ def avocado_pipeline(model_path, model_name):
 
 
 if __name__ == '__main__':
-    model_path = 'results/avocado/recurrentgan/minmax/rnn_epochs_30000_D_epochs_3_batch_size_32_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.000100/'
-    model_name = 'generator_30000.h5'
+    model_path = 'results/electricity/recurrentgan/minmax/lstm_epochs_5001_D_epochs_5_batch_size_64_noise_vec_100_gnodes_64_dnodes_256_loss_kl_lr_0.000100/'
+    model_name = 'generator_2000.h5'
     avocado_pipeline(model_path, model_name)

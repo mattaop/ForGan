@@ -315,6 +315,7 @@ if __name__ == '__main__':
     coverage_80_PI_2, coverage_95_PI_2 = [], []
     kl_div, js_div, uncertainty_list = [], [], []
     for i in range(5):
+        print(np.std(generate_noise(5000), axis=0))
         gan = GAN(config)
         gan.build_model()
         gan.train(epochs=3000, batch_size=1024)

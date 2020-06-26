@@ -6,7 +6,12 @@ show_plot = True
 
 
 def read_files(file_name):
-    df = pd.read_csv(file_name.lower() + '/validation_results.txt', header=0)
+    if file_name.lower() == 'results/electricity/recurrentgan/minmax/lstm_epochs_5001_d_epochs_5_batch_size_64_noise_vec_100_gnodes_64_dnodes_256_loss_kl_lr_0.000100':
+        df = pd.read_csv(file_name.lower() + '/generator_2000.h5_y_test_results.txt', header=0)
+    elif file_name.lower() == 'results/electricity/arima':
+        df = pd.read_csv(file_name.lower() + '/3_test_results.txt', header=0)
+    else:
+        df = pd.read_csv(file_name.lower() + '/y_test_results.txt', header=0)
     return df
 
 
@@ -26,15 +31,15 @@ def print_point_forecast_results(model_paths, labels, model_names):
                  np.mean(df['coverage_80'])*100, np.mean(df['coverage_95'])*100, np.mean(df['width_80'])*1,
                  np.mean(df['width_95'])*1))
         """
-        print(model_name + " & $ %.4f $ & $ %.2f $ & $ %.3f $ \\\\ "
+        print(model_name + " & $ %.2f $ & $ %.2f $ & $ %.3f $ \\\\ "
               % (np.mean(df['mse']) * 1, np.mean(df['smape']) * 1, np.mean(df['mase']) * 1))
 
 
 def print_uncertainty_results(model_paths, labels, model_names):
     for model_paths, label, model_name in zip(model_paths, labels, model_names):
         df = read_files(model_paths)
-        print(model_name + " & $%.3f $ & $ %.3f $ & $ %.3f $ & $ %.2f \\%%  $  &  $ %.2f \\%% $ & $ %.3f $ & $ %.3f $\\\\ "
-              % (np.mean(df['std']) * 1, np.mean(df['msis_80']) * 1, np.mean(df['msis_95']) * 1, np.mean(df['coverage_80']) * 100,
+        print(model_name + " & $ %.3f $ & $ %.3f $ & $ %.2f \\%%  $  &  $ %.2f \\%% $ & $ %.3f $ & $ %.3f $\\\\ "
+              % (np.mean(df['msis_80']) * 1, np.mean(df['msis_95']) * 1, np.mean(df['coverage_80']) * 100,
                  np.mean(df['coverage_95']) * 100, np.mean(df['width_80']) * 1,
                  np.mean(df['width_95']) * 1))
 
@@ -80,9 +85,13 @@ def main():
                   'results/sine/recurrentgan/minmax/rnn_epochs_10000_D_epochs_5_batch_size_32_noise_vec_100_gnodes_16_dnodes_64_loss_w_lr_0.000100']
     wgan_models = ['GAN', 'WGAN', 'Optimal WGAN', 'Optimal WGAN']
 
-    model_paths = wgan_paths
-    labels = noise_label
-    model_names = wgan_models
+    compare_electricity_model_paths = ['results/electricity/arima',
+                                       'results/electricity/es',
+                                       'results/electricity/rnn/minmax/rnn_epochs_501_D_epochs_5_batch_size_64_noise_vec_100_gnodes_64_dnodes_256_loss_kl_lr_0.000100',
+                                       'results/electricity/recurrentgan/minmax/lstm_epochs_5001_D_epochs_5_batch_size_64_noise_vec_100_gnodes_64_dnodes_256_loss_kl_lr_0.000100']
+    model_paths = compare_electricity_model_paths
+    labels = compare_models
+    model_names = compare_models
     print_results(model_paths=model_paths,
                   labels=labels,
                   model_names=model_names,)

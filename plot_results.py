@@ -10,7 +10,12 @@ show_plot = False
 
 
 def read_training_files(file_name, data):
-    if data == 'training':
+    print(file_name)
+    if file_name == 'results/electricity/recurrentgan/minmax/lstm_epochs_5001_D_epochs_5_batch_size_64_noise_vec_100_gnodes_64_dnodes_256_loss_kl_lr_0.000100':
+        print('forgan')
+        df = pd.read_csv(file_name + '/generator_2000.h5_y_test_results.txt', header=0)
+        # df = pd.read_csv(file_name + '/test_results_mean.txt', header=0)
+    elif data == 'training':
         df = pd.read_csv(file_name + '/training_results.txt', header=0)
     elif data == 'validation':
         df = pd.read_csv(file_name + '/validation_results.txt', header=0)
@@ -105,12 +110,13 @@ def plot_test_results(model_paths, file_labels, title, save_file='Test', data_se
 def main():
     noise_paths = ['recurrentgan/minmax/rnn_epochs_1500_D_epochs_3_batch_size_32_noise_vec_1_gnodes_16_dnodes_64_loss_kl_lr_0.001000',
                    'recurrentgan/minmax/rnn_epochs_1500_D_epochs_3_batch_size_32_noise_vec_5_gnodes_16_dnodes_64_loss_kl_lr_0.001000',
-                   'recurrentgan/minmax/rnn_epochs_1500_D_epochs_3_batch_size_32_noise_vec_10_gnodes_16_dnodes_64_loss_kl_lr_0.001000',
-                   'recurrentgan/minmax/rnn_epochs_1500_D_epochs_3_batch_size_32_noise_vec_25_gnodes_16_dnodes_64_loss_kl_lr_0.001000',
+                   #'recurrentgan/minmax/rnn_epochs_1500_D_epochs_3_batch_size_32_noise_vec_10_gnodes_16_dnodes_64_loss_kl_lr_0.001000',
+                   #'recurrentgan/minmax/rnn_epochs_1500_D_epochs_3_batch_size_32_noise_vec_25_gnodes_16_dnodes_64_loss_kl_lr_0.001000',
                    'recurrentgan/minmax/rnn_epochs_1500_D_epochs_3_batch_size_32_noise_vec_50_gnodes_16_dnodes_64_loss_kl_lr_0.001000',
                    'recurrentgan/minmax/rnn_epochs_1500_D_epochs_3_batch_size_32_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.001000'
                    ]
-    noise_label = ['Noise vector = 1', 'Noise vector = 5', 'Noise vector = 10', 'Noise vector = 25',
+    noise_label = ['Noise vector = 1', 'Noise vector = 5',
+                   #'Noise vector = 10', 'Noise vector = 25',
                    'Noise vector = 50', 'Noise vector = 100']
 
     d_epochs_paths = ['recurrentgan/rnn_epochs_3000_D_epochs_1_batch_size_16_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.001000',
@@ -142,17 +148,16 @@ def main():
                   'recurrentgan/minmax/rnn_epochs_5000_D_epochs_5_batch_size_32_noise_vec_100_gnodes_16_dnodes_64_loss_w_lr_0.000100']
     w_gan_label = ['GAN', 'WGAN', 'Optimal WGAN']
     data_set = 'sine'
-    save_file_as = 'wgan'
-    model_paths = w_gan_path
-    labels = w_gan_label
-    plot_training_results(model_paths=model_paths,
-                          file_labels=labels,
-                          save_file=save_file_as,
-                          title=['Validation Mean Squared Error',
-                                 'Validation 80% Prediction Interval Coverage',
-                                 'Validation 95% Prediction Interval Coverage'],
-                          plot_rate=25, data_set=data_set)
-
+    save_file_as = 'noise'
+    model_paths = noise_paths
+    labels = noise_label
+    #plot_training_results(model_paths=model_paths,
+    #                      file_labels=labels,
+    #                      save_file=save_file_as,
+    #                      title=['Validation Mean Squared Error',
+    #                             'Validation 80% Prediction Interval Coverage',
+    #                             'Validation 95% Prediction Interval Coverage'],
+    #                      plot_rate=25, data_set=data_set)
     #plot_validation_results(model_paths=model_paths,
     #                        file_labels=labels,
     #                        save_file=save_file_as,
@@ -161,8 +166,8 @@ def main():
     #                               'Forecast Mean Absolute Scaled Error',
     #                               'Forecast Validation 80% Prediction Interval Coverage',
     #                               'Forecast Validation 95% Prediction Interval Coverage'
-    #                               ],
-    #                        data_set=data_set)
+     #                              ],
+     #                       data_set=data_set)
 
     model_paths_oslo = ['arima',
                    'es',
@@ -177,14 +182,18 @@ def main():
                            'es',
                            'rnn/minmax/rnn_epochs_50_D_epochs_3_batch_size_64_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.000100',
                            'recurrentgan/minmax/rnn_epochs_30000_D_epochs_3_batch_size_32_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.000100']
+    model_paths_electricity = ['arima',
+                               'es',
+                               'rnn/minmax/rnn_epochs_501_D_epochs_5_batch_size_64_noise_vec_100_gnodes_64_dnodes_256_loss_kl_lr_0.000100',
+                               'recurrentgan/minmax/lstm_epochs_5001_D_epochs_5_batch_size_64_noise_vec_100_gnodes_64_dnodes_256_loss_kl_lr_0.000100']
 
     labels = ['ARIMA',
               'ETS',
               'MC dropout',
               'ForGAN']
     save_file_as = 'compare'
-    data_set = 'avocado'
-    plot_test_results(model_paths=model_paths_avocado,
+    data_set = 'electricity'
+    plot_test_results(model_paths=model_paths_electricity,
                       file_labels=labels,
                       save_file=save_file_as,
                       title=['Forecast Mean Squared Error',

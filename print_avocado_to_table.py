@@ -7,7 +7,7 @@ show_plot = True
 
 def read_files(file_name, columnname):
     # print( ' file_name', file_name)
-    df = pd.read_csv(file_name.lower() + '/' + columnname[1] + '_' + columnname[2] + '_' + 'test_results.txt', header=0)
+    df = pd.read_csv(file_name.lower() + '/' + columnname[1] + '_' + columnname[2] + '_test_results.txt', header=0)
     return df
 
 
@@ -84,11 +84,19 @@ def print_results(model_paths, model_names):
 
 def main():
     compare_models = ['ARIMA', 'ES', 'MC Dropout', 'ForGAN']
-    compare_model_paths = ['results/avocado/arima',
-                            'results/avocado/es',
-                            'results/avocado/rnn/minmax/rnn_epochs_50_D_epochs_3_batch_size_64_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.000100',
-                           'results/avocado/recurrentgan/minmax/rnn_epochs_30000_D_epochs_3_batch_size_32_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.000100']
-    model_paths = compare_model_paths
+    compare_avocado_model_paths = ['results/avocado/arima',
+                                   'results/avocado/es',
+                                   'results/avocado/rnn/minmax/rnn_epochs_50_D_epochs_3_batch_size_64_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.000100',
+                                   'results/avocado/recurrentgan/minmax/rnn_epochs_30000_D_epochs_3_batch_size_32_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.000100']
+    # compare_model_paths = ['results/avocado/recurrentgan/minmax/rnn_epochs_30000_D_epochs_3_batch_size_32_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.000100',
+    #                       'results/avocado/recurrentgan/minmax/rnn_epochs_20000_D_epochs_3_batch_size_32_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.001000']
+    # compare_models = ['30000', '20000']
+    compare_electricity_model_paths = ['results/electricity/arima',
+                                       'results/electricity/es',
+                                       'results/electricity/rnn/minmax/rnn_epochs_500_D_epochs_5_batch_size_64_noise_vec_100_gnodes_64_dnodes_256_loss_kl_lr_0.000100',
+                                       'results/electricity/recurrentgan/minmax/lstm_epochs_5001_D_epochs_5_batch_size_64_noise_vec_100_gnodes_64_dnodes_256_loss_kl_lr_0.000100']
+
+    model_paths = compare_electricity_model_paths
     model_names = compare_models
     print_results(model_paths=model_paths,
                   model_names=model_names)

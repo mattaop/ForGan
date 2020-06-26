@@ -69,10 +69,9 @@ def plot_figures(data, test, window_size, columnName, data_set='oslo'):
                          data[i]['pred_int_95_low'],
                          data[i]['pred_int_95_high'],
                          alpha=0.2, edgecolor='#CC4F1B', facecolor='#FF9848', label='95%-PI')
-        plt.title(columnName[1] + ' ' + columnName[2] + ' Time Series Forecasting')
+        plt.title('Electricity Time Series Forecasting')
         plt.legend(loc=2)
-        plt.savefig('plots/' + data_set + '/' + columnName[1] + '_' + columnName[2] + '_' + model_names[i] +
-                    '_forecasting_horizon.png')
+        plt.savefig('plots/' + data_set + '/' + model_names[i] + '_forecasting_horizon.png')
         # plt.show()
         plt.close()
 
@@ -81,14 +80,14 @@ def pipeline(model_paths):
     cfg = load_config_file(model_paths[3]+'config.yml')
     train, test, scaler = load_data(cfg=cfg, window_size=cfg['window_size'])
 
-    arima_data = read_files(model_paths[0], 'test_results.txt_forecast_horizon.csv')
-    es_data = read_files(model_paths[1], 'test_results.txt_forecast_horizon.csv')
-    mc_data = read_files(model_paths[2], 'test_results.txt_forecast_horizon.csv')
-    gan_data = read_files(model_paths[3], 'test_results_generator_5000.h5.txt_forecast_horizon.csv')
+    arima_data = read_files(model_paths[0], '3_forecast_horizon.csv')
+    es_data = read_files(model_paths[1], 'y_forecast_horizon.csv')
+    mc_data = read_files(model_paths[2], 'y_test_results.txt_forecast_horizon.csv')
+    gan_data = read_files(model_paths[3], 'generator_2000.h5_y_test_results.txt_forecast_horizon.csv')
     # _generator_5000.h5
     data = [arima_data, es_data, mc_data, gan_data]
-    plot_figures(data, scaler.inverse_transform(test[:cfg['window_size'] + len(data[0]['forecast'])]),
-                 cfg['window_size'], None, data_set='oslo')
+    plot_figures(data, scaler[0].inverse_transform(test[300:cfg['window_size'] + len(data[0]['forecast'])]),
+                 cfg['window_size']-300, ['', 'y', ''], data_set='electricity')
 
 
 def avocado_pipeline(model_paths):
@@ -114,5 +113,10 @@ if __name__ == '__main__':
                   'results/avocado/es/',
                   'results/avocado/rnn/minmax/rnn_epochs_50_D_epochs_3_batch_size_64_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.000100/',
                   'results/avocado/recurrentgan/minmax/rnn_epochs_30000_D_epochs_3_batch_size_32_noise_vec_100_gnodes_16_dnodes_64_loss_kl_lr_0.000100/']
+    compare_electricity_model_paths = ['results/electricity/arima/',
+                                       'results/electricity/es/',
+                                       'results/electricity/rnn/minmax/rnn_epochs_501_D_epochs_5_batch_size_64_noise_vec_100_gnodes_64_dnodes_256_loss_kl_lr_0.000100/',
+                                       'results/electricity/recurrentgan/minmax/lstm_epochs_5001_D_epochs_5_batch_size_64_noise_vec_100_gnodes_64_dnodes_256_loss_kl_lr_0.000100/']
+
     model_names = ['ARIMA', 'ETS', 'MC Dropout', 'ForGAN']
-    avocado_pipeline(model_path)
+    pipeline(compare_electricity_model_paths)

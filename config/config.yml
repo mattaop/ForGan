@@ -1,7 +1,7 @@
-model_name: RecurrentGAN # RNN, ES, ARIMA, GAN, ConvGAN, RecurrentGAN, RecurrentConvGAN, RecurrentConvDSGAN, RecurrentConditionalGAN
+model_name: RNN # RNN, ES, ARIMA, GAN, ConvGAN, RecurrentGAN, RecurrentConvGAN, RecurrentConvDSGAN, RecurrentConditionalGAN
 loss_function: kl # kl, w, ds
 
-epochs: 5001
+epochs: 502
 batch_size: 64
 learning_rate: 0.0001
 discriminator_epochs: 5
@@ -10,7 +10,7 @@ layers: lstm  # rnn, lstm, gru
 number_of_recurrent_layers: 1
 generator_nodes: 64
 discriminator_nodes: 256
-batch_norm: False # True, False
+batch_norm: True # True, False
 dropout: False # True, False
 noise_vector_size: 100
 noise_type: gaussian # gaussian (default), uniform

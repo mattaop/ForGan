@@ -1,0 +1,12 @@
+numpy
+pandas
+sklearn
+scikit-image
+tensorflow==1.14.0
+keras
+pydataset
+pyyaml
+statsmodels
+tqdm
+seaborn
+pmdarima

@@ -49,6 +49,7 @@ def load_electricity(project_path=None):
         project_path = path['project path']
     data_array = np.load(project_path + 'data//data_files/electricity.npy')
     # data_array_reduce = block_reduce(data_array, block_size=(1, 24), func=np.mean, cval=np.mean(data_array))
+    print(data_array.shape[1])
     idx = pd.DatetimeIndex(freq="h", start="2018-01-01", periods=data_array.shape[1])
     # df = pd.DataFrame(data_array)
     df = pd.DataFrame(data=data_array.transpose(), index=idx, columns=map(str, np.arange(0, 370)))
@@ -106,12 +107,14 @@ def load_avocado(project_path=None):
 
 if __name__ == "__main__":
 
-    data = load_sub_electricity(project_path="C:\\Users\\mathi\\PycharmProjects\\gan\\")
+    data = load_electricity(project_path="C:\\Users\\mathi\\PycharmProjects\\gan\\")
     print(data)
     i = 0
     for columnName, columnData in data.iteritems():
         plt.plot(data.loc['2018-01-01 00:00:0':'2019-01-01 00:00:0', columnName])
-        plt.title(columnName)
+        plt.title('Electricity Consumption')
+        plt.ylabel('Percentage of max consumption')
+        plt.xlabel('Time')
         plt.show()
     """
     data = load_avocado(project_path="C:\\Users\\mathi\\PycharmProjects\\gan\\")
