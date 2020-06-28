@@ -58,12 +58,13 @@ Change configurations in:
 
 ### Run code
 The following files have to be ran in order to do the experiments:
+
 Baseline models:
 ```bash
 time_series_pipeline_baseline.py
 time_series_pipeline_avocado_baseline.py
 ```
-Neural networks:
+Neural networks and generative adversarial networks:
 ```bash
 time_series_pipeline_with_validation.py
 time_series_pipeline_avocado.py
