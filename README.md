@@ -77,3 +77,6 @@ Neural networks and generative adversarial networks:
 time_series_pipeline_with_validation.py
 time_series_pipeline_avocado.py
 ```
+
+### Reproduce results
+The models used to obtain the results is saved in the "results" folder. They can be tested through the "test_models.py" file to verify and reproduce results.
