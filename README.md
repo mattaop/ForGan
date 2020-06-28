@@ -1,5 +1,5 @@
 # Forecasting Uncertainty for Univariate Time Series Using Generative Adversarial Networks
-Release version 1.0: 26.06.2020
+Release version 1.0: 28.06.2020
 
 ### Requirements
 Dependencies necessary to run the code:
@@ -45,7 +45,7 @@ Electricity consumption data set: https://archive.ics.uci.edu/ml/datasets/Electr
 Oslo Temperature data set: https://wiki.math.ntnu.no/lib/exe/fetch.php?tok=5deb8a&media=https%3A%2F%2Fwww.math.ntnu.no%2Femner%2FTMA4285%2F2019h%2Fpdf%2Fdata.xlsx
 
 ### Configurations
-Set the path of the project folder in order to run the code:
+Set the absolute path to root folder 'C://Users//...ForGAN//'" of the project folder in order to run the code:
 ```bash
 |---- config  # Folder for configurations
 |     |---- paths.yml   # Set project path
@@ -58,6 +58,14 @@ Change configurations in:
 
 ### Run code
 The following files have to be ran in order to do the experiments:
+
+Set configurations in config.yml, among them model and data set
+
+For Oslo temperature and sine data sets, run time_series_pipeline_baseline.py or time_series_pipeline_with_validation.py
+
+For avocado price and electricity data sets, run time_series_pipeline_avocado_baseline.py or time_series_pipeline_avocado.py
+
+
 
 Baseline models:
 ```bash
